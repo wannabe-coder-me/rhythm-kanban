@@ -1078,10 +1078,14 @@ function BoardPageContent() {
                   key={column.id}
                   column={column}
                   tasks={column.tasks || []}
-                  onTaskClick={(task) => setSelectedTask(task)}
+                  onTaskClick={(task) => {
+                    setSelectedTask(task);
+                    setSelectedTaskId(task.id);
+                  }}
                   onAddTask={handleAddTask}
                   onDeleteColumn={() => handleDeleteColumn(column.id)}
                   onToggleSubtask={handleToggleSubtask}
+                  selectedTaskId={selectedTaskId}
                 />
               ))}
 
