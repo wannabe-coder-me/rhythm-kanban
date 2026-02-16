@@ -2,7 +2,7 @@
 
 ## Overview
 
-A modern Kanban board application with spreadsheet view, drag-and-drop columns/tasks, and team collaboration features.
+A modern Kanban board application with real-time collaboration, RBAC permissions, and team features. Built for Rhythm's internal project management.
 
 ## Tech Stack
 
@@ -13,6 +13,7 @@ A modern Kanban board application with spreadsheet view, drag-and-drop columns/t
 | Auth | NextAuth.js (Google OAuth) |
 | Styling | Tailwind CSS |
 | Drag & Drop | @dnd-kit |
+| Real-time | Server-Sent Events (SSE) |
 | Deployment | Railway (auto-deploy from `main`) |
 
 ## Project Structure
@@ -21,31 +22,55 @@ A modern Kanban board application with spreadsheet view, drag-and-drop columns/t
 rhythm-kanban/
 ├── prisma/
 │   └── schema.prisma       # Database schema
+├── public/
+│   └── uploads/            # File attachments storage
+├── scripts/
+│   └── fix-board-membership.ts  # Migration helper
 ├── src/
 │   ├── app/
-│   │   ├── admin/          # Admin panel (user management)
+│   │   ├── admin/          # Admin panel
 │   │   ├── boards/[id]/    # Board views (kanban + table)
+│   │   ├── invite/[token]/ # Invite acceptance
+│   │   ├── my-tasks/       # Cross-board task list
+│   │   ├── notifications/  # Notification center
 │   │   ├── api/
 │   │   │   ├── admin/      # Admin API routes
 │   │   │   ├── auth/       # NextAuth endpoints
-│   │   │   ├── boards/     # Board CRUD
+│   │   │   ├── boards/     # Board CRUD + labels + members + invites + events
 │   │   │   ├── columns/    # Column CRUD
-│   │   │   ├── tasks/      # Task CRUD + comments
+│   │   │   ├── invites/    # Invite acceptance
+│   │   │   ├── my-tasks/   # User's tasks
+│   │   │   ├── notifications/ # Notifications
+│   │   │   ├── tasks/      # Task CRUD + comments + attachments
 │   │   │   └── users/      # User endpoints
 │   │   ├── login/          # Login page
 │   │   └── page.tsx        # Home (board list)
 │   ├── components/
-│   │   ├── Column.tsx      # Kanban column
-│   │   ├── TaskCard.tsx    # Task card component
-│   │   └── TaskDetailPanel.tsx  # Task detail sidebar
+│   │   ├── BoardSettings.tsx    # Board settings modal
+│   │   ├── Column.tsx           # Kanban column
+│   │   ├── FilterBar.tsx        # Filters & search
+│   │   ├── InviteModal.tsx      # Invite members
+│   │   ├── LabelManager.tsx     # Manage board labels
+│   │   ├── LabelSelector.tsx    # Select labels for task
+│   │   ├── PresenceIndicator.tsx # Who's viewing
+│   │   ├── TaskCard.tsx         # Task card
+│   │   ├── TaskDetailPanel.tsx  # Task detail sidebar
+│   │   └── Toast.tsx            # Toast notifications
+│   ├── hooks/
+│   │   ├── useBoardEvents.ts    # SSE subscription
+│   │   └── useFilters.ts        # Filter state management
 │   ├── lib/
-│   │   ├── auth.ts         # NextAuth config
-│   │   └── prisma.ts       # Prisma client
+│   │   ├── auth.ts              # NextAuth config
+│   │   ├── events.ts            # SSE pub/sub
+│   │   ├── label-colors.ts      # Preset label colors
+│   │   ├── notifications.ts     # Notification helpers
+│   │   ├── permissions.ts       # RBAC helpers
+│   │   └── prisma.ts            # Prisma client
 │   └── types/
-│       ├── index.ts        # App types
-│       └── next-auth.d.ts  # Session type extensions
-├── .env.example            # Environment template
-├── railway.toml            # Railway config
+│       ├── index.ts             # App types
+│       └── next-auth.d.ts       # Session type extensions
+├── .env.example
+├── railway.toml
 └── tailwind.config.ts
 ```
 
@@ -53,132 +78,174 @@ rhythm-kanban/
 
 ```
 User
-├── id, email, name, image, role (admin/member)
-├── accounts (OAuth)
-├── sessions
-├── boardMembers → Board membership
-├── tasksAssigned / tasksCreated
-├── comments, activities
+├── id, email, name, image
+├── role: 'admin' | 'manager' | 'user' (system role)
+├── ownedBoards, boardMembers
+├── tasksAssigned, tasksCreated
+├── comments, activities, attachments
+├── notifications
 
 Board
 ├── id, name, description
-├── columns → Column[]
-├── members → BoardMember[]
+├── visibility: 'private' | 'team' | 'public'
+├── ownerId → User (owner)
+├── columns, members, labels, invites
+
+BoardMember
+├── boardId, userId
+├── role: 'admin' | 'member' | 'viewer'
+├── invitedById, invitedAt, joinedAt
+
+BoardInvite
+├── boardId, email, role, token
+├── status: 'pending' | 'accepted' | 'revoked' | 'expired'
+├── invitedById, expiresAt
 
 Column
 ├── id, boardId, name, position, color
-├── tasks → Task[]
+├── tasks
 
 Task
 ├── id, columnId, title, description
-├── position, priority, dueDate, labels[]
-├── completed, assigneeId, createdById
-├── parentId (subtasks)
-├── comments, activities
+├── position, priority, dueDate, completed
+├── assigneeId, createdById, parentId (subtasks)
+├── labels (many-to-many)
+├── comments, activities, attachments, subtasks
+
+Label
+├── id, boardId, name, color
+├── tasks (many-to-many)
+
+Attachment
+├── id, taskId, filename, url, mimeType, size
+├── uploadedById
 
 Comment / Activity
 ├── Linked to Task + User
 
-Attachment
-├── id, taskId, filename, url
-├── mimeType, size, uploadedById
-├── createdAt
-├── Linked to Task + User (uploader)
-
-Label (planned)
-├── id, boardId, name, color
-├── tasks (many-to-many)
-
-Notification (planned)
-├── id, userId, type, title, message
-├── link, read, createdAt
+Notification
+├── id, userId, type, title, message, link
+├── read, createdAt
 ```
 
-## Authentication
+## Authentication & Authorization
 
-- **Provider**: Google OAuth via NextAuth.js
-- **Adapter**: Prisma (stores sessions in DB)
-- **Session**: Contains `id`, `role`, `name`, `email`, `image`
-- **Roles**: `admin` (full access), `member` (standard)
+### System Roles
+| Role | Permissions |
+|------|-------------|
+| Admin | Full access, manage all users/boards, system settings |
+| Manager | Create boards, manage team members, view team boards |
+| User | Create personal boards, join boards when invited |
+
+### Board Roles
+| Role | Permissions |
+|------|-------------|
+| Owner | Full control, delete board, transfer ownership |
+| Admin | Edit settings, manage members, all task actions |
+| Member | Create/edit/move tasks, comment |
+| Viewer | View only, can comment |
+
+### Board Visibility
+| Type | Access |
+|------|--------|
+| Private | Invited members only |
+| Team | All authenticated users can view |
+| Public | Anyone with link (logged in) |
 
 ## Key Features
 
 ### Kanban Board (`/boards/[id]`)
 - Drag-and-drop columns and tasks (@dnd-kit)
-- Add/edit/delete columns
-- Task cards with priority badges, due dates, assignees
-
-### Spreadsheet View (`/boards/[id]/table`)
-- Table view of all tasks
-- Inline editing
-- Sorting and filtering
-
-### Task Details
-- Slide-out panel for task editing
-- Comments and activity feed
-- Subtask support
-
-### Admin Panel (`/admin`)
-- View all users
-- Add users by email (pre-provision before OAuth)
-- Change user roles
-- Delete users
+- Column reordering
+- Filter bar (assignee, priority, due date, labels, search)
+- Real-time updates with SSE
+- Presence indicators (who's viewing)
 
 ### Subtasks (Asana-style)
-- Expand/collapse chevron on parent tasks
-- Nested subtasks with progress bar (X/Y completed)
-- Checkable directly from board view
-- Subtasks follow parent (not separately draggable)
+- Nested under parent tasks
+- Expand/collapse chevron
+- Progress bar (X/Y completed)
+- Checkable from board view
 
-### File Attachments
-- Drag-and-drop upload zone in task detail panel
-- Supports images, PDFs, docs, spreadsheets (max 10MB)
-- Files stored in `/public/uploads/{taskId}/`
-- Attachment count shown on task cards (📎 3)
-- Image previews, file type icons
-- Activity log for attachments
+### Table View (`/boards/[id]/table`)
+- Spreadsheet view of all tasks
+- Same filters as kanban
+- Labels column
 
-### Column Reordering
-- Drag column headers to rearrange
-- Position persists via API
-
-## Planned Features (In Progress)
+### Task Details (slide-out panel)
+- Title, description, priority, due date
+- Assignee, status (column)
+- Labels (multi-select)
+- File attachments (drag-drop upload)
+- Subtasks
+- Comments & activity feed
 
 ### Labels/Tags
-- Colored labels per board (red, blue, green, etc.)
-- Assign multiple labels to tasks
-- Label management in board settings
-- API: `/api/boards/[id]/labels`
-
-### Filters & Search
-- Filter bar above kanban columns
-- Filter by: assignee, priority, due date, labels
-- Search task title/description
-- Filters persist in URL params
+- Per-board labels with colors
+- 8 preset colors
+- Label manager modal
+- Filter by label
 
 ### Real-time Updates
-- Server-Sent Events (SSE) for live board updates
-- See changes when teammates move/edit tasks
-- Endpoint: `/api/boards/[id]/events`
-- Hook: `useBoardEvents(boardId, onEvent)`
+- SSE endpoint: `/api/boards/[id]/events`
+- Events: task/column CRUD, moves, reorders
+- Presence: see who's viewing
+- Toast notifications for remote changes
 
 ### Notifications
-- In-app notifications (assigned, mentioned, comments, due soon)
-- Bell icon with unread count in header
-- Notifications page at `/notifications`
-- API: `/api/notifications`
+- Bell icon with unread count
+- Triggers: assigned, mentioned, comments
+- `/notifications` page
 
-### My Tasks View
-- `/my-tasks` - All tasks assigned to current user
-- Grouped by due date (Overdue, Today, This Week, etc.)
-- Quick actions: mark complete, change priority
+### My Tasks (`/my-tasks`)
+- All tasks assigned to user across boards
+- Grouped by due date (overdue, today, this week)
+- Quick complete/priority actions
+
+### Admin Panel (`/admin`)
+- Users tab: manage system roles, delete users
+- Boards tab: view all, transfer ownership, delete
+- System admins only
+
+### Board Settings
+- General: name, description, visibility
+- Members: list, change roles, remove
+- Invites: email or link, pending invites
+- Danger: transfer ownership, delete board
+
+## API Routes
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET/POST | `/api/boards` | List/create boards |
+| GET/PATCH/DELETE | `/api/boards/[id]` | Board CRUD |
+| GET/POST | `/api/boards/[id]/columns` | List/create columns |
+| PATCH | `/api/boards/[id]/columns/reorder` | Reorder columns |
+| GET/POST/PATCH/DELETE | `/api/boards/[id]/labels` | Board labels |
+| GET | `/api/boards/[id]/events` | SSE real-time stream |
+| GET/POST | `/api/boards/[id]/members` | Board members |
+| PATCH/DELETE | `/api/boards/[id]/members/[userId]` | Update/remove member |
+| GET/POST | `/api/boards/[id]/invites` | Board invites |
+| PATCH/DELETE | `/api/columns/[id]` | Column update/delete |
+| POST | `/api/columns/[id]/tasks` | Create task |
+| GET/PATCH/DELETE | `/api/tasks/[id]` | Task CRUD |
+| POST | `/api/tasks/[id]` | Create subtask |
+| GET/POST | `/api/tasks/[id]/comments` | Task comments |
+| GET/POST/DELETE | `/api/tasks/[id]/attachments` | File attachments |
+| GET/POST | `/api/invites/[token]` | Get/accept invite |
+| GET | `/api/my-tasks` | User's tasks across boards |
+| GET/PATCH/DELETE | `/api/notifications` | User notifications |
+| GET/POST | `/api/admin/users` | Admin: list/add users |
+| PATCH/DELETE | `/api/admin/users/[id]` | Admin: update/delete user |
+| GET | `/api/admin/boards` | Admin: list all boards |
+| PATCH/DELETE | `/api/admin/boards/[id]` | Admin: update/delete board |
 
 ## Environment Variables
 
 ```bash
-DATABASE_URL=postgresql://...
+DATABASE_URL=postgresql://...  # Railway PostgreSQL
 NEXTAUTH_SECRET=<openssl rand -base64 32>
-NEXTAUTH_URL=https://your-domain.com
+NEXTAUTH_URL=https://your-railway-url.up.railway.app
 GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_SECRET=...
 ```
@@ -197,30 +264,11 @@ GOOGLE_CLIENT_SECRET=...
 npm install
 
 # Set up .env from .env.example
+# Get DATABASE_URL from Railway
 
-# Push schema to DB
+# Push schema
 npx prisma db push
 
 # Run dev server
 npm run dev
 ```
-
-## API Routes
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET/POST | `/api/boards` | List/create boards |
-| GET/PATCH/DELETE | `/api/boards/[id]` | Board CRUD |
-| GET/POST | `/api/boards/[id]/columns` | List/create columns |
-| PATCH/DELETE | `/api/columns/[id]` | Column update/delete |
-| POST | `/api/columns/[id]/tasks` | Create task |
-| GET/PATCH/DELETE | `/api/tasks/[id]` | Task CRUD |
-| GET/POST | `/api/tasks/[id]/comments` | Task comments |
-| GET/POST/DELETE | `/api/tasks/[id]/attachments` | Task file attachments |
-| GET/POST | `/api/admin/users` | Admin: list/add users |
-| PATCH/DELETE | `/api/admin/users/[id]` | Admin: update/delete user |
-| PATCH | `/api/boards/[id]/columns/reorder` | Reorder columns |
-| GET/POST/PATCH/DELETE | `/api/boards/[id]/labels` | Board labels (planned) |
-| GET | `/api/boards/[id]/events` | SSE real-time stream (planned) |
-| GET/PATCH/DELETE | `/api/notifications` | User notifications (planned) |
-| GET | `/api/my-tasks` | Tasks assigned to user (planned) |
