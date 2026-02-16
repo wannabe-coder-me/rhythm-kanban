@@ -2,12 +2,14 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import type { Board, Column, Task, User, Priority } from "@/types";
 import { format } from "date-fns";
 import clsx from "clsx";
+import { FilterBar } from "@/components/FilterBar";
+import { useFilters } from "@/hooks/useFilters";
 
 type SortField = "title" | "status" | "assignee" | "dueDate" | "priority";
 type SortOrder = "asc" | "desc";
@@ -26,7 +28,7 @@ const priorityColors: Record<Priority, string> = {
   urgent: "bg-red-500/20 text-red-400",
 };
 
-export default function TableViewPage() {
+function TableViewContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const params = useParams();
@@ -36,9 +38,6 @@ export default function TableViewPage() {
   const [columns, setColumns] = useState<Column[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filterPriority, setFilterPriority] = useState<Priority | "all">("all");
-  const [filterAssignee, setFilterAssignee] = useState<string>("all");
   const [filterColumn, setFilterColumn] = useState<string>("all");
   const [sortField, setSortField] = useState<SortField>("title");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
@@ -47,6 +46,16 @@ export default function TableViewPage() {
     taskId: string;
     field: string;
   } | null>(null);
+
+  // Use the shared filter system
+  const {
+    filters,
+    updateFilters,
+    clearFilters,
+    activeFilterCount,
+    hasActiveFilters,
+    filterTasks,
+  } = useFilters();
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -90,30 +99,42 @@ export default function TableViewPage() {
     }
   }, [session, fetchBoard, fetchUsers]);
 
-  // Get all tasks flattened
-  const allTasks = columns.flatMap((col) =>
-    (col.tasks || []).map((task) => ({
-      ...task,
-      column: col,
-    }))
-  );
+  // Collect all unique labels from tasks (Label objects have id, name, color)
+  const allLabels = useMemo(() => {
+    const labelMap = new Map<string, { id: string; name: string }>();
+    columns.forEach((col) => {
+      col.tasks?.forEach((task) => {
+        task.labels?.forEach((label) => {
+          if (typeof label === 'string') {
+            labelMap.set(label, { id: label, name: label });
+          } else {
+            labelMap.set(label.id, { id: label.id, name: label.name });
+          }
+        });
+      });
+    });
+    return Array.from(labelMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [columns]);
 
-  // Filter tasks
-  const filteredTasks = allTasks.filter((task) => {
-    if (searchQuery && !task.title.toLowerCase().includes(searchQuery.toLowerCase())) {
-      return false;
-    }
-    if (filterPriority !== "all" && task.priority !== filterPriority) {
-      return false;
-    }
-    if (filterAssignee !== "all" && task.assigneeId !== filterAssignee) {
-      return false;
-    }
-    if (filterColumn !== "all" && task.columnId !== filterColumn) {
-      return false;
-    }
-    return true;
-  });
+  // Get all tasks flattened (excluding subtasks)
+  const allTasks = useMemo(() => {
+    return columns.flatMap((col) =>
+      (col.tasks || [])
+        .filter((task) => !task.parentId)
+        .map((task) => ({
+          ...task,
+          column: col,
+        }))
+    );
+  }, [columns]);
+
+  // Filter tasks using the shared filter hook, then apply column filter
+  const filteredTasks = useMemo(() => {
+    const filtered = filterTasks(allTasks);
+    // Apply column filter on top
+    if (filterColumn === "all") return filtered;
+    return filtered.filter((task) => task.columnId === filterColumn);
+  }, [allTasks, filterTasks, filterColumn]);
 
   // Sort tasks
   const sortedTasks = [...filteredTasks].sort((a, b) => {
@@ -281,45 +302,28 @@ export default function TableViewPage() {
 
         {/* Filters & Bulk Actions */}
         <div className="px-6 pb-3 flex items-center gap-4 flex-wrap">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search tasks..."
-            className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-1.5 text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-64"
+          <FilterBar
+            filters={filters}
+            onFilterChange={updateFilters}
+            onClearFilters={clearFilters}
+            activeFilterCount={activeFilterCount}
+            users={users}
+            allLabels={allLabels}
           />
+          
+          {/* Column/Status filter - specific to table view */}
           <select
             value={filterColumn}
             onChange={(e) => setFilterColumn(e.target.value)}
-            className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className={clsx(
+              "bg-slate-700 border rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500",
+              filterColumn !== "all" ? "border-indigo-500" : "border-slate-600"
+            )}
           >
             <option value="all">All Status</option>
             {columns.map((col) => (
               <option key={col.id} value={col.id}>
                 {col.name}
-              </option>
-            ))}
-          </select>
-          <select
-            value={filterPriority}
-            onChange={(e) => setFilterPriority(e.target.value as Priority | "all")}
-            className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            <option value="all">All Priorities</option>
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-            <option value="urgent">Urgent</option>
-          </select>
-          <select
-            value={filterAssignee}
-            onChange={(e) => setFilterAssignee(e.target.value)}
-            className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            <option value="all">All Assignees</option>
-            {users.map((user) => (
-              <option key={user.id} value={user.id}>
-                {user.name || user.email}
               </option>
             ))}
           </select>
@@ -567,14 +571,18 @@ export default function TableViewPage() {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-1">
-                    {task.labels?.map((label) => (
-                      <span
-                        key={label}
-                        className="px-2 py-0.5 bg-indigo-500/20 text-indigo-300 text-xs rounded-full"
-                      >
-                        {label}
-                      </span>
-                    ))}
+                    {task.labels?.map((label) => {
+                      const labelName = typeof label === 'string' ? label : label.name;
+                      const labelId = typeof label === 'string' ? label : label.id;
+                      return (
+                        <span
+                          key={labelId}
+                          className="px-2 py-0.5 bg-indigo-500/20 text-indigo-300 text-xs rounded-full"
+                        >
+                          {labelName}
+                        </span>
+                      );
+                    })}
                   </div>
                 </td>
               </tr>
@@ -584,10 +592,37 @@ export default function TableViewPage() {
 
         {sortedTasks.length === 0 && (
           <div className="text-center py-16 text-slate-500">
-            No tasks found
+            {hasActiveFilters ? (
+              <div className="space-y-2">
+                <p>No tasks match your filters</p>
+                <button
+                  onClick={clearFilters}
+                  className="text-indigo-400 hover:text-indigo-300 text-sm font-medium"
+                >
+                  Clear filters
+                </button>
+              </div>
+            ) : (
+              "No tasks found"
+            )}
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+// Wrapper with Suspense for useSearchParams
+export default function TableViewPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-slate-900">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
+        </div>
+      }
+    >
+      <TableViewContent />
+    </Suspense>
   );
 }

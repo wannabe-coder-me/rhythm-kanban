@@ -5,13 +5,18 @@ import type { User, Priority } from "@/types";
 import type { FilterState, DueDateFilter } from "@/hooks/useFilters";
 import clsx from "clsx";
 
+interface LabelOption {
+  id: string;
+  name: string;
+}
+
 interface FilterBarProps {
   filters: FilterState;
   onFilterChange: (filters: Partial<FilterState>) => void;
   onClearFilters: () => void;
   activeFilterCount: number;
   users: User[];
-  allLabels: string[];
+  allLabels: LabelOption[];
 }
 
 const priorityOptions: { value: Priority; label: string; color: string }[] = [
@@ -113,7 +118,7 @@ export function FilterBar({
       {allLabels.length > 0 && (
         <MultiSelect
           label="Labels"
-          options={allLabels.map((l) => ({ value: l, label: l }))}
+          options={allLabels.map((l) => ({ value: l.id, label: l.name }))}
           selected={filters.labelIds}
           onChange={(labelIds) => onFilterChange({ labelIds })}
         />

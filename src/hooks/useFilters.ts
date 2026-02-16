@@ -2,7 +2,7 @@
 
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useCallback, useMemo, useEffect, useState } from "react";
-import type { Priority, Task } from "@/types";
+import type { Priority, Task, Label } from "@/types";
 import { isToday, isThisWeek, isPast, startOfDay } from "date-fns";
 
 export type DueDateFilter = "all" | "overdue" | "today" | "this_week" | "no_date";
@@ -159,9 +159,13 @@ export function useFilters() {
         }
       }
 
-      // Label filter
+      // Label filter - labels can be Label objects or strings
       if (filters.labelIds.length > 0) {
-        if (!task.labels || !filters.labelIds.some(label => task.labels.includes(label))) {
+        if (!task.labels || task.labels.length === 0) return false;
+        const taskLabelIds = task.labels.map((l: Label | string) => 
+          typeof l === 'string' ? l : l.id
+        );
+        if (!filters.labelIds.some(labelId => taskLabelIds.includes(labelId))) {
           return false;
         }
       }
