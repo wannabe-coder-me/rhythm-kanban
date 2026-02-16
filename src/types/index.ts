@@ -1,0 +1,73 @@
+export type Priority = "low" | "medium" | "high" | "urgent";
+
+export interface User {
+  id: string;
+  email: string;
+  name: string | null;
+  image: string | null;
+}
+
+export interface Board {
+  id: string;
+  name: string;
+  description: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  columns?: Column[];
+  members?: BoardMember[];
+}
+
+export interface BoardMember {
+  id: string;
+  boardId: string;
+  userId: string;
+  role: string;
+  user?: User;
+}
+
+export interface Column {
+  id: string;
+  boardId: string;
+  name: string;
+  position: number;
+  color: string;
+  tasks?: Task[];
+}
+
+export interface Task {
+  id: string;
+  columnId: string;
+  title: string;
+  description: string | null;
+  position: number;
+  priority: Priority;
+  dueDate: Date | null;
+  labels: string[];
+  assigneeId: string | null;
+  createdById: string;
+  createdAt: Date;
+  updatedAt: Date;
+  assignee?: User | null;
+  createdBy?: User;
+  comments?: Comment[];
+  column?: Column;
+}
+
+export interface Comment {
+  id: string;
+  taskId: string;
+  userId: string;
+  content: string;
+  createdAt: Date;
+  user?: User;
+}
+
+export interface Activity {
+  id: string;
+  taskId: string;
+  userId: string;
+  action: string;
+  details: Record<string, unknown> | null;
+  createdAt: Date;
+  user?: User;
+}

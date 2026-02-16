@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  name          String?
+  image         String?
+  createdAt     DateTime  @default(now())
+  
+  accounts      Account[]
+  sessions      Session[]
+  boardMembers  BoardMember[]
+  tasksAssigned Task[]    @relation("TaskAssignee")
+  tasksCreated  Task[]    @relation("TaskCreator")
+  comments      Comment[]
+  activities    Activity[]
+}
+
+model Account {
+  id                String  @id @default(uuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Board {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  columns     Column[]
+  members     BoardMember[]
+}
+
+model BoardMember {
+  id      String @id @default(uuid())
+  boardId String
+  userId  String
+  role    String @default("member")
+  board   Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([boardId, userId])
+}
+
+model Column {
+  id       String @id @default(uuid())
+  boardId  String
+  name     String
+  position Int
+  color    String @default("#6366f1")
+  board    Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  tasks    Task[]
+}
+
+model Task {
+  id          String    @id @default(uuid())
+  columnId    String
+  title       String
+  description String?
+  position    Int
+  priority    String    @default("medium")
+  dueDate     DateTime?
+  labels      String[]
+  assigneeId  String?
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  column      Column    @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  assignee    User?     @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  createdBy   User      @relation("TaskCreator", fields: [createdById], references: [id])
+  comments    Comment[]
+  activities  Activity[]
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  taskId    String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Activity {
+  id        String   @id @default(uuid())
+  taskId    String
+  userId    String
+  action    String
+  details   Json?
+  createdAt DateTime @default(now())
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+}
