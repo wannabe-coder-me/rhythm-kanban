@@ -7,16 +7,18 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { useState } from "react";
-import type { Column as ColumnType, Task } from "@/types";
+import { useState, useEffect } from "react";
+import type { Column as ColumnType, Task, TaskTemplate } from "@/types";
 import { TaskCard } from "./TaskCard";
 import clsx from "clsx";
 
 interface ColumnProps {
   column: ColumnType;
   tasks: Task[];
+  boardId?: string;
   onTaskClick: (task: Task) => void;
   onAddTask: (columnId: string, title: string) => void;
+  onTaskCreatedFromTemplate?: (task: Task) => void;
   onDeleteColumn?: () => void;
   onToggleSubtask?: (subtaskId: string, completed: boolean) => void;
   selectedTaskId?: string | null;
@@ -25,8 +27,10 @@ interface ColumnProps {
 export function Column({
   column,
   tasks,
+  boardId,
   onTaskClick,
   onAddTask,
+  onTaskCreatedFromTemplate,
   onDeleteColumn,
   onToggleSubtask,
   selectedTaskId,
@@ -34,6 +38,42 @@ export function Column({
   const [isAdding, setIsAdding] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [showMenu, setShowMenu] = useState(false);
+  const [showTemplateDropdown, setShowTemplateDropdown] = useState(false);
+  const [templates, setTemplates] = useState<TaskTemplate[]>([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
+
+  // Fetch templates when dropdown is shown
+  useEffect(() => {
+    if (showTemplateDropdown && boardId) {
+      setLoadingTemplates(true);
+      fetch(`/api/boards/${boardId}/task-templates`)
+        .then((res) => res.json())
+        .then((data) => setTemplates(data))
+        .catch((err) => console.error("Failed to fetch templates:", err))
+        .finally(() => setLoadingTemplates(false));
+    }
+  }, [showTemplateDropdown, boardId]);
+
+  const handleUseTemplate = async (template: TaskTemplate) => {
+    if (!boardId) return;
+    try {
+      const res = await fetch(
+        `/api/boards/${boardId}/task-templates/${template.id}/use`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ columnId: column.id }),
+        }
+      );
+      if (res.ok) {
+        const task = await res.json();
+        onTaskCreatedFromTemplate?.(task);
+        setShowTemplateDropdown(false);
+      }
+    } catch (err) {
+      console.error("Failed to create task from template:", err);
+    }
+  };
 
   // Make column sortable for reordering
   const {
@@ -182,15 +222,63 @@ export function Column({
             </div>
           </div>
         ) : (
-          <button
-            onClick={() => setIsAdding(true)}
-            className="w-full flex items-center gap-2 text-slate-400 hover:text-white text-sm py-2 px-3 hover:bg-slate-700 rounded transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Add task
-          </button>
+          <div className="relative">
+            <div className="flex gap-1">
+              <button
+                onClick={() => setIsAdding(true)}
+                data-add-task
+                data-column-id={column.id}
+                className="flex-1 flex items-center gap-2 text-slate-400 hover:text-white text-sm py-2 px-3 hover:bg-slate-700 rounded-l transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Add task
+              </button>
+              {boardId && (
+                <button
+                  onClick={() => setShowTemplateDropdown(!showTemplateDropdown)}
+                  className="px-2 text-slate-400 hover:text-white text-sm py-2 hover:bg-slate-700 rounded-r transition-colors border-l border-slate-600"
+                  title="Create from template"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              )}
+            </div>
+            {/* Template Dropdown */}
+            {showTemplateDropdown && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setShowTemplateDropdown(false)}
+                />
+                <div className="absolute left-0 right-0 bottom-full mb-1 bg-slate-700 rounded-lg shadow-xl z-20 py-1 overflow-hidden max-h-64 overflow-y-auto">
+                  {loadingTemplates ? (
+                    <div className="px-4 py-2 text-sm text-slate-400">Loading...</div>
+                  ) : templates.length === 0 ? (
+                    <div className="px-4 py-3 text-sm text-slate-400 text-center">
+                      No templates yet
+                    </div>
+                  ) : (
+                    templates.map((template) => (
+                      <button
+                        key={template.id}
+                        onClick={() => handleUseTemplate(template)}
+                        className="w-full px-4 py-2 text-left text-sm text-white hover:bg-slate-600 flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4 text-indigo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span className="truncate">{template.name}</span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </>
+            )}
+          </div>
         )}
       </div>
     </div>

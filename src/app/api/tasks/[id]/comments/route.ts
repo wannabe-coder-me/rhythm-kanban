@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { notifyComment, notifyMentioned, parseMentions } from "@/lib/notifications";
+import { createAndEmitActivity } from "@/lib/activity";
 
 export async function GET(
   req: NextRequest,
@@ -72,15 +73,8 @@ export async function POST(
     include: { user: true },
   });
 
-  // Create activity
-  await prisma.activity.create({
-    data: {
-      taskId: id,
-      userId: session.user.id,
-      action: "commented",
-      details: { preview: content.substring(0, 50) },
-    },
-  });
+  // Create activity and emit to subscribers
+  await createAndEmitActivity(id, session.user.id, "commented", { preview: content.substring(0, 50) });
 
   // Get current user's name for notifications
   const currentUser = await prisma.user.findUnique({

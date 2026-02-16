@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { createAndEmitActivity } from "@/lib/activity";
 import { writeFile, mkdir, unlink } from "fs/promises";
 import { join } from "path";
 import { v4 as uuid } from "uuid";
@@ -144,15 +145,8 @@ export async function POST(
       include: { uploadedBy: true },
     });
 
-    // Log activity
-    await prisma.activity.create({
-      data: {
-        taskId,
-        userId: session.user.id,
-        action: "attached file",
-        details: { filename: file.name },
-      },
-    });
+    // Log activity and emit to subscribers
+    await createAndEmitActivity(taskId, session.user.id, "added attachment", { filename: file.name });
 
     return NextResponse.json(attachment);
   } catch (error) {

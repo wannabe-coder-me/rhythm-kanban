@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { subscribeToBoard, unsubscribeFromBoard } from "@/lib/activity-emitter";
+import { subscribeToActivity } from "@/lib/activity";
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -22,16 +22,16 @@ export async function GET(req: NextRequest) {
   }
 
   const encoder = new TextEncoder();
+  let unsubscribe: (() => void) | null = null;
+
   const stream = new ReadableStream({
     start(controller) {
       const send = (data: string) => {
         controller.enqueue(encoder.encode(`data: ${data}\n\n`));
       };
 
-      // Subscribe to all accessible boards
-      accessibleBoardIds.forEach((boardId) => {
-        subscribeToBoard(boardId, send);
-      });
+      // Subscribe to all accessible boards using the centralized activity system
+      unsubscribe = subscribeToActivity(accessibleBoardIds, send);
 
       // Send heartbeat every 30 seconds
       const heartbeat = setInterval(() => {
@@ -45,9 +45,9 @@ export async function GET(req: NextRequest) {
       // Cleanup on close
       req.signal.addEventListener("abort", () => {
         clearInterval(heartbeat);
-        accessibleBoardIds.forEach((boardId) => {
-          unsubscribeFromBoard(boardId, send);
-        });
+        if (unsubscribe) {
+          unsubscribe();
+        }
       });
 
       // Send initial connection confirmation

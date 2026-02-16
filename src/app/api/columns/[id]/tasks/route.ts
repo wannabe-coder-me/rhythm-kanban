@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { emitBoardEvent } from "@/lib/events";
+import { createAndEmitActivity } from "@/lib/activity";
 
 export async function GET(
   req: NextRequest,
@@ -99,15 +100,8 @@ export async function POST(
     },
   });
 
-  // Create activity
-  await prisma.activity.create({
-    data: {
-      taskId: task.id,
-      userId: session.user.id,
-      action: "created",
-      details: { title: task.title },
-    },
-  });
+  // Create activity and emit to subscribers
+  await createAndEmitActivity(task.id, session.user.id, "created", { title: task.title });
 
   // Emit real-time event
   emitBoardEvent(column.board.id, {

@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { notifyAssigned } from "@/lib/notifications";
 import { emitBoardEvent } from "@/lib/events";
+import { createAndEmitActivity } from "@/lib/activity";
 
 export async function GET(
   req: NextRequest,
@@ -99,7 +100,7 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await req.json();
-  const { title, description, priority, dueDate, labelIds, assigneeId, columnId, position, completed, isRecurring, recurrenceRule, customFields } = body;
+  const { title, description, priority, startDate, dueDate, labelIds, assigneeId, columnId, position, completed, isRecurring, recurrenceRule, customFields } = body;
 
   const task = await prisma.task.findFirst({
     where: { id },
@@ -186,6 +187,7 @@ export async function PATCH(
       ...(title !== undefined && { title: title.trim() }),
       ...(description !== undefined && { description: description?.trim() || null }),
       ...(priority && { priority }),
+      ...(startDate !== undefined && { startDate: startDate ? new Date(startDate) : null }),
       ...(dueDate !== undefined && { dueDate: dueDate ? new Date(dueDate) : null }),
       ...(labelIds !== undefined && {
         labels: {
@@ -212,16 +214,19 @@ export async function PATCH(
     },
   });
 
-  // Create activities
+  // Create activities and emit to subscribers
   for (const activity of activities) {
-    await prisma.activity.create({
-      data: {
-        taskId: id,
-        userId: session.user.id,
-        action: activity.action,
-        details: activity.details as object,
-      },
-    });
+    await createAndEmitActivity(id, session.user.id, activity.action, activity.details);
+  }
+
+  // Track completion activity
+  if (completed !== undefined && completed !== task.completed) {
+    await createAndEmitActivity(
+      id,
+      session.user.id,
+      completed ? "completed" : "reopened",
+      { title: task.title }
+    );
   }
 
   // Handle custom field values

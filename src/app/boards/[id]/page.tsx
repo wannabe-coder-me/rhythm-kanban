@@ -1096,11 +1096,25 @@ function BoardPageContent() {
                   key={column.id}
                   column={column}
                   tasks={column.tasks || []}
+                  boardId={boardId}
                   onTaskClick={(task) => {
                     setSelectedTask(task);
                     setSelectedTaskId(task.id);
                   }}
                   onAddTask={handleAddTask}
+                  onTaskCreatedFromTemplate={(task) => {
+                    setColumns((prev) =>
+                      prev.map((col) => {
+                        if (col.id === task.columnId) {
+                          const exists = col.tasks?.some((t) => t.id === task.id);
+                          if (exists) return col;
+                          return { ...col, tasks: [...(col.tasks || []), task] };
+                        }
+                        return col;
+                      })
+                    );
+                    addToast(`Created: ${task.title}`, "success");
+                  }}
                   onDeleteColumn={() => handleDeleteColumn(column.id)}
                   onToggleSubtask={handleToggleSubtask}
                   selectedTaskId={selectedTaskId}

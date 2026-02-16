@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import type { Board, BoardMember, User, BoardVisibility, BoardInvite, Column } from "@/types";
+import { CustomFieldManager } from "./CustomFieldManager";
 
 interface BoardSettingsProps {
   board: Board;
@@ -13,7 +14,7 @@ interface BoardSettingsProps {
   onBoardDelete: () => void;
 }
 
-type Tab = "general" | "members" | "integrations" | "danger";
+type Tab = "general" | "members" | "custom-fields" | "integrations" | "danger";
 
 interface BoardEmailAddress {
   id: string;
@@ -424,6 +425,7 @@ export function BoardSettings({
           {[
             { id: "general", label: "General" },
             { id: "members", label: "Members" },
+            { id: "custom-fields", label: "Custom Fields" },
             { id: "integrations", label: "Integrations", show: canEdit },
             { id: "danger", label: "Danger Zone", show: isOwner },
           ]
@@ -703,6 +705,11 @@ export function BoardSettings({
                 </div>
               )}
             </div>
+          )}
+
+          {/* Custom Fields Tab */}
+          {activeTab === "custom-fields" && (
+            <CustomFieldManager boardId={board.id} />
           )}
 
           {/* Integrations Tab */}
