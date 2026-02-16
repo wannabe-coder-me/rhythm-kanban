@@ -57,11 +57,16 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
+  console.log("[POST /api/boards] Session:", session?.user?.id, session?.user?.email);
+  
   if (!session?.user?.id) {
+    console.log("[POST /api/boards] No user ID in session");
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { name, description, visibility = "private" } = await req.json();
+  const body = await req.json();
+  const { name, description, visibility = "private" } = body;
+  console.log("[POST /api/boards] Creating board:", name, "for user:", session.user.id);
 
   if (!name?.trim()) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
@@ -72,36 +77,42 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid visibility" }, { status: 400 });
   }
 
-  const board = await prisma.board.create({
-    data: {
-      name: name.trim(),
-      description: description?.trim() || null,
-      visibility,
-      ownerId: session.user.id,
-      // Owner is automatically added as admin member
-      members: {
-        create: {
-          userId: session.user.id,
-          role: "admin",
-          joinedAt: new Date(),
+  try {
+    const board = await prisma.board.create({
+      data: {
+        name: name.trim(),
+        description: description?.trim() || null,
+        visibility,
+        ownerId: session.user.id,
+        // Owner is automatically added as admin member
+        members: {
+          create: {
+            userId: session.user.id,
+            role: "admin",
+            joinedAt: new Date(),
+          },
+        },
+        columns: {
+          createMany: {
+            data: [
+              { name: "To Do", position: 0, color: "#6366f1" },
+              { name: "In Progress", position: 1, color: "#f59e0b" },
+              { name: "Done", position: 2, color: "#22c55e" },
+            ],
+          },
         },
       },
-      columns: {
-        createMany: {
-          data: [
-            { name: "To Do", position: 0, color: "#6366f1" },
-            { name: "In Progress", position: 1, color: "#f59e0b" },
-            { name: "Done", position: 2, color: "#22c55e" },
-          ],
-        },
+      include: {
+        owner: { select: { id: true, name: true, email: true, image: true } },
+        columns: { orderBy: { position: "asc" } },
+        members: { include: { user: true } },
       },
-    },
-    include: {
-      owner: { select: { id: true, name: true, email: true, image: true } },
-      columns: { orderBy: { position: "asc" } },
-      members: { include: { user: true } },
-    },
-  });
+    });
 
-  return NextResponse.json(board);
+    console.log("[POST /api/boards] Board created:", board.id);
+    return NextResponse.json(board);
+  } catch (error) {
+    console.error("[POST /api/boards] Error creating board:", error);
+    return NextResponse.json({ error: "Failed to create board", details: String(error) }, { status: 500 });
+  }
 }

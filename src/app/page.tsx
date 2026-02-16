@@ -83,9 +83,14 @@ export default function HomePage() {
         setNewBoardName("");
         setNewBoardDesc("");
         router.push(`/boards/${board.id}`);
+      } else {
+        const error = await res.json();
+        console.error("Failed to create board:", res.status, error);
+        alert(`Failed to create board: ${error.error || res.statusText}`);
       }
     } catch (error) {
       console.error("Failed to create board:", error);
+      alert("Failed to create board. Check console for details.");
     } finally {
       setCreating(false);
     }
