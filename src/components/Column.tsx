@@ -223,7 +223,7 @@ export function Column({
             />
             <div className="flex gap-2">
               <button
-                onClick={handleAddTask}
+                onClick={() => handleAddTask()}
                 className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white text-sm py-1.5 rounded transition-colors"
               >
                 Add
