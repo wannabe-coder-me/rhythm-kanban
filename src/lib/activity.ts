@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { Prisma } from "@prisma/client";
 
 // Types for activity data
 export interface ActivityData {
@@ -86,13 +87,13 @@ export async function createAndEmitActivity(
   details?: Record<string, unknown>
 ): Promise<void> {
   try {
-    // Create the activity record
+    // Create the activity record with full includes
     const activity = await prisma.activity.create({
       data: {
         taskId,
         userId,
         action,
-        details: details || null,
+        details: details ? (details as Prisma.InputJsonValue) : Prisma.JsonNull,
       },
       include: {
         user: {

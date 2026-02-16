@@ -54,6 +54,9 @@ export async function GET(
                 where: { blockedBy: { completed: false } },
                 select: { id: true },
               },
+              customFieldValues: {
+                include: { customField: true },
+              },
             },
           },
         },

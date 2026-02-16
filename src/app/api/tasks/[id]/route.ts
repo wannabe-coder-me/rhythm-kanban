@@ -119,7 +119,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const activities: { action: string; details: object }[] = [];
+  const activities: { action: string; details: Record<string, unknown> }[] = [];
 
   // Track changes for activity log
   if (columnId && columnId !== task.columnId) {
@@ -370,15 +370,8 @@ export async function POST(
     },
   });
 
-  // Create activity
-  await prisma.activity.create({
-    data: {
-      taskId: parentId,
-      userId: session.user.id,
-      action: "added subtask",
-      details: { subtaskTitle: subtask.title },
-    },
-  });
+  // Create activity and emit to subscribers
+  await createAndEmitActivity(parentId, session.user.id, "added subtask", { subtaskTitle: subtask.title });
 
   // Emit real-time event
   const boardId = parentTask.column.board.id;
