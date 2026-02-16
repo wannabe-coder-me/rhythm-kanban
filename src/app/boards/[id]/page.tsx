@@ -1211,6 +1211,9 @@ function BoardPageContent() {
             fetchLabels();
             fetchBoard();
           }}
+          onSubtasksChange={() => {
+            fetchBoard();
+          }}
         />
       )}
 

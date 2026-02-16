@@ -36,6 +36,7 @@ interface TaskDetailPanelProps {
   onUpdate: (taskId: string, updates: Partial<Task> & { labelIds?: string[] }) => void;
   onDelete: (taskId: string) => void;
   onLabelsChange: () => void;
+  onSubtasksChange?: () => void;
 }
 
 const priorities: Priority[] = ["low", "medium", "high", "urgent"];
@@ -198,6 +199,7 @@ export function TaskDetailPanel({
   onUpdate,
   onDelete,
   onLabelsChange,
+  onSubtasksChange,
 }: TaskDetailPanelProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -281,6 +283,7 @@ export function TaskDetailPanel({
         const subtask = await res.json();
         setSubtasks([...subtasks, subtask]);
         setNewSubtaskTitle("");
+        onSubtasksChange?.();
       }
     } catch (error) {
       console.error("Failed to add subtask:", error);
@@ -298,6 +301,7 @@ export function TaskDetailPanel({
         setSubtasks(subtasks.map((s) => 
           s.id === subtask.id ? { ...s, completed: !s.completed } : s
         ));
+        onSubtasksChange?.();
       }
     } catch (error) {
       console.error("Failed to toggle subtask:", error);
@@ -330,6 +334,7 @@ export function TaskDetailPanel({
       });
       if (res.ok) {
         setSubtasks(subtasks.filter((s) => s.id !== subtaskId));
+        onSubtasksChange?.();
       }
     } catch (error) {
       console.error("Failed to delete subtask:", error);
