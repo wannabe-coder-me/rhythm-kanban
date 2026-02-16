@@ -112,15 +112,16 @@ function SortableSubtaskItem({
       {/* Checkbox */}
       <button
         onClick={onToggleComplete}
+        style={{ width: '14px', height: '14px', minWidth: '14px', minHeight: '14px' }}
         className={clsx(
-          "w-3.5 h-3.5 rounded border flex items-center justify-center flex-shrink-0 transition-colors",
+          "rounded border flex items-center justify-center flex-shrink-0 transition-colors",
           subtask.completed
             ? "bg-green-500 border-green-500 text-white"
             : "border-slate-500 hover:border-slate-400"
         )}
       >
         {subtask.completed && (
-          <svg className="w-2 h-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg style={{ width: '8px', height: '8px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
           </svg>
         )}
