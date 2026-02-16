@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { notifyAssigned } from "@/lib/notifications";
+import { emitBoardEvent } from "@/lib/events";
 
 export async function GET(
   req: NextRequest,
@@ -101,6 +103,21 @@ export async function PATCH(
       action: "assigned",
       details: { assignee: newAssignee?.name || "Unassigned" },
     });
+
+    // Send notification to the new assignee (if not self-assigning)
+    if (assigneeId && assigneeId !== session.user.id) {
+      const currentUser = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { name: true },
+      });
+      await notifyAssigned(
+        assigneeId,
+        task.title,
+        task.id,
+        task.column.board.id,
+        currentUser?.name || "Someone"
+      );
+    }
   }
 
   // Handle position/column changes
@@ -168,6 +185,24 @@ export async function PATCH(
     });
   }
 
+  // Emit real-time event
+  const boardId = task.column.board.id;
+  if (columnId && columnId !== task.columnId) {
+    // Task was moved to a different column
+    emitBoardEvent(boardId, {
+      type: "task:moved",
+      taskId: id,
+      columnId,
+      position: position ?? 0,
+      userId: session.user.id,
+    });
+  }
+  emitBoardEvent(boardId, {
+    type: "task:updated",
+    task: updated,
+    userId: session.user.id,
+  });
+
   return NextResponse.json(updated);
 }
 
@@ -198,7 +233,15 @@ export async function DELETE(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  const boardId = task.column.board.id;
   await prisma.task.delete({ where: { id } });
+
+  // Emit real-time event
+  emitBoardEvent(boardId, {
+    type: "task:deleted",
+    taskId: id,
+    userId: session.user.id,
+  });
 
   return NextResponse.json({ success: true });
 }
@@ -263,6 +306,14 @@ export async function POST(
       action: "added subtask",
       details: { subtaskTitle: subtask.title },
     },
+  });
+
+  // Emit real-time event
+  const boardId = parentTask.column.board.id;
+  emitBoardEvent(boardId, {
+    type: "task:created",
+    task: subtask,
+    userId: session.user.id,
   });
 
   return NextResponse.json(subtask);

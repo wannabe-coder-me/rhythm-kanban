@@ -76,6 +76,61 @@ function BoardPageContent() {
     })
   );
 
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login");
+    }
+  }, [status, router]);
+
+  const fetchBoard = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/boards/${boardId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setBoard(data);
+        setColumns(data.columns || []);
+      } else {
+        router.push("/");
+      }
+    } catch (error) {
+      console.error("Failed to fetch board:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [boardId, router]);
+
+  const fetchUsers = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/users?boardId=${boardId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setUsers(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
+    }
+  }, [boardId]);
+
+  const fetchLabels = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/boards/${boardId}/labels`);
+      if (res.ok) {
+        const data = await res.json();
+        setAvailableLabels(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch labels:", error);
+    }
+  }, [boardId]);
+
+  useEffect(() => {
+    if (session) {
+      fetchBoard();
+      fetchUsers();
+      fetchLabels();
+    }
+  }, [session, fetchBoard, fetchUsers, fetchLabels]);
+
   // Handle real-time events from other users
   const handleBoardEvent = useCallback((event: BoardEvent) => {
     // Skip events from ourselves
@@ -211,61 +266,6 @@ function BoardPageContent() {
     onEvent: handleBoardEvent,
     enabled: !!session && !!boardId,
   });
-
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/login");
-    }
-  }, [status, router]);
-
-  const fetchBoard = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/boards/${boardId}`);
-      if (res.ok) {
-        const data = await res.json();
-        setBoard(data);
-        setColumns(data.columns || []);
-      } else {
-        router.push("/");
-      }
-    } catch (error) {
-      console.error("Failed to fetch board:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [boardId, router]);
-
-  const fetchUsers = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/users?boardId=${boardId}`);
-      if (res.ok) {
-        const data = await res.json();
-        setUsers(data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch users:", error);
-    }
-  }, [boardId]);
-
-  const fetchLabels = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/boards/${boardId}/labels`);
-      if (res.ok) {
-        const data = await res.json();
-        setAvailableLabels(data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch labels:", error);
-    }
-  }, [boardId]);
-
-  useEffect(() => {
-    if (session) {
-      fetchBoard();
-      fetchUsers();
-      fetchLabels();
-    }
-  }, [session, fetchBoard, fetchUsers, fetchLabels]);
 
   // Get all tasks (flat) and identify which are parent tasks
   const getAllTasks = useCallback(() => {
@@ -457,7 +457,7 @@ function BoardPageContent() {
     }
   };
 
-  const handleUpdateTask = async (taskId: string, updates: Partial<Task>) => {
+  const handleUpdateTask = async (taskId: string, updates: Partial<Task> & { labelIds?: string[] }) => {
     try {
       const res = await fetch(`/api/tasks/${taskId}`, {
         method: "PATCH",

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { emitBoardEvent } from "@/lib/events";
 
 export async function GET(
   req: NextRequest,
@@ -100,6 +101,13 @@ export async function POST(
       action: "created",
       details: { title: task.title },
     },
+  });
+
+  // Emit real-time event
+  emitBoardEvent(column.board.id, {
+    type: "task:created",
+    task: task,
+    userId: session.user.id,
   });
 
   return NextResponse.json(task);

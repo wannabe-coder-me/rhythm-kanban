@@ -2,17 +2,21 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
-import type { Task, User, Comment, Activity, Column, Priority, Attachment } from "@/types";
+import type { Task, User, Comment, Activity, Column, Priority, Attachment, Label } from "@/types";
 import { format } from "date-fns";
 import clsx from "clsx";
+import { LabelSelector } from "./LabelSelector";
 
 interface TaskDetailPanelProps {
   task: Task | null;
   columns: Column[];
   users: User[];
+  boardId: string;
+  availableLabels: Label[];
   onClose: () => void;
-  onUpdate: (taskId: string, updates: Partial<Task>) => void;
+  onUpdate: (taskId: string, updates: Partial<Task> & { labelIds?: string[] }) => void;
   onDelete: (taskId: string) => void;
+  onLabelsChange: () => void;
 }
 
 const priorities: Priority[] = ["low", "medium", "high", "urgent"];
@@ -28,9 +32,12 @@ export function TaskDetailPanel({
   task,
   columns,
   users,
+  boardId,
+  availableLabels,
   onClose,
   onUpdate,
   onDelete,
+  onLabelsChange,
 }: TaskDetailPanelProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -38,8 +45,7 @@ export function TaskDetailPanel({
   const [dueDate, setDueDate] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
   const [columnId, setColumnId] = useState("");
-  const [labels, setLabels] = useState<string[]>([]);
-  const [newLabel, setNewLabel] = useState("");
+  const [taskLabels, setTaskLabels] = useState<Label[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [newComment, setNewComment] = useState("");
@@ -60,7 +66,7 @@ export function TaskDetailPanel({
       setDueDate(task.dueDate ? format(new Date(task.dueDate), "yyyy-MM-dd") : "");
       setAssigneeId(task.assigneeId || "");
       setColumnId(task.columnId);
-      setLabels(task.labels || []);
+      setTaskLabels(task.labels || []);
       setSubtasks([]);
       setAttachments([]);
       fetchTaskDetails();
@@ -253,26 +259,52 @@ export function TaskDetailPanel({
       dueDate: dueDate ? new Date(dueDate) : null,
       assigneeId: assigneeId || null,
       columnId,
-      labels,
+      labelIds: taskLabels.map((l) => l.id),
     });
   };
 
-  const addLabel = () => {
-    if (newLabel.trim() && !labels.includes(newLabel.trim())) {
-      const updated = [...labels, newLabel.trim()];
-      setLabels(updated);
-      setNewLabel("");
-      if (task) {
-        onUpdate(task.id, { labels: updated });
+  const handleToggleLabel = (labelId: string) => {
+    if (!task) return;
+    const hasLabel = taskLabels.some((l) => l.id === labelId);
+    let newLabels: Label[];
+    
+    if (hasLabel) {
+      newLabels = taskLabels.filter((l) => l.id !== labelId);
+    } else {
+      const label = availableLabels.find((l) => l.id === labelId);
+      if (label) {
+        newLabels = [...taskLabels, label];
+      } else {
+        return;
       }
     }
+    
+    setTaskLabels(newLabels);
+    onUpdate(task.id, { labelIds: newLabels.map((l) => l.id) });
   };
 
-  const removeLabel = (label: string) => {
-    const updated = labels.filter((l) => l !== label);
-    setLabels(updated);
-    if (task) {
-      onUpdate(task.id, { labels: updated });
+  const handleCreateLabel = async (name: string, color: string): Promise<Label | null> => {
+    try {
+      const res = await fetch(`/api/boards/${boardId}/labels`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, color }),
+      });
+      
+      if (res.ok) {
+        const label = await res.json();
+        // Auto-add to current task
+        if (task) {
+          const newLabels = [...taskLabels, label];
+          setTaskLabels(newLabels);
+          onUpdate(task.id, { labelIds: newLabels.map((l) => l.id) });
+        }
+        return label;
+      }
+      return null;
+    } catch (err) {
+      console.error("Failed to create label:", err);
+      return null;
     }
   };
 
@@ -426,40 +458,14 @@ export function TaskDetailPanel({
           {/* Labels */}
           <div>
             <label className="block text-sm font-medium text-slate-400 mb-2">Labels</label>
-            <div className="flex flex-wrap gap-2 mb-2">
-              {labels.map((label) => (
-                <span
-                  key={label}
-                  className="inline-flex items-center gap-1 px-2 py-1 bg-indigo-500/20 text-indigo-300 text-sm rounded-full"
-                >
-                  {label}
-                  <button
-                    onClick={() => removeLabel(label)}
-                    className="hover:text-white"
-                  >
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </span>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={newLabel}
-                onChange={(e) => setNewLabel(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && addLabel()}
-                placeholder="Add label..."
-                className="flex-1 bg-slate-700 border border-slate-600 rounded-lg px-3 py-1.5 text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-              <button
-                onClick={addLabel}
-                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg transition-colors"
-              >
-                Add
-              </button>
-            </div>
+            <LabelSelector
+              boardId={boardId}
+              selectedLabels={taskLabels}
+              availableLabels={availableLabels}
+              onToggleLabel={handleToggleLabel}
+              onCreateLabel={handleCreateLabel}
+              onLabelsChange={onLabelsChange}
+            />
           </div>
 
           {/* Description */}

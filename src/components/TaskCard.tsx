@@ -7,6 +7,7 @@ import type { Task, Priority } from "@/types";
 import { format } from "date-fns";
 import clsx from "clsx";
 import { useState } from "react";
+import { getContrastColor } from "@/lib/label-colors";
 
 interface TaskCardProps {
   task: Task;
@@ -122,14 +123,38 @@ export function TaskCard({ task, onClick, onToggleSubtask }: TaskCardProps) {
 
         {task.labels && task.labels.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-2">
-            {task.labels.map((label) => (
-              <span
-                key={label}
-                className="px-2 py-0.5 bg-indigo-500/20 text-indigo-300 text-xs rounded-full"
-              >
-                {label}
-              </span>
-            ))}
+            {task.labels.length <= 3 ? (
+              // Show full pills for up to 3 labels
+              task.labels.map((label) => (
+                <span
+                  key={label.id}
+                  className="px-2 py-0.5 text-xs rounded-full"
+                  style={{
+                    backgroundColor: label.color,
+                    color: getContrastColor(label.color),
+                  }}
+                >
+                  {label.name}
+                </span>
+              ))
+            ) : (
+              // Show colored dots for many labels
+              <>
+                {task.labels.slice(0, 4).map((label) => (
+                  <div
+                    key={label.id}
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: label.color }}
+                    title={label.name}
+                  />
+                ))}
+                {task.labels.length > 4 && (
+                  <span className="text-xs text-slate-400">
+                    +{task.labels.length - 4}
+                  </span>
+                )}
+              </>
+            )}
           </div>
         )}
 

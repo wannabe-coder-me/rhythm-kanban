@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { emitBoardEvent } from "@/lib/events";
 
 export async function PATCH(
   req: NextRequest,
@@ -63,6 +64,13 @@ export async function PATCH(
     include: { tasks: { include: { assignee: true } } },
   });
 
+  // Emit real-time event
+  emitBoardEvent(column.boardId, {
+    type: "column:updated",
+    column: updated,
+    userId: session.user.id,
+  });
+
   return NextResponse.json(updated);
 }
 
@@ -91,7 +99,15 @@ export async function DELETE(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  const boardId = column.boardId;
   await prisma.column.delete({ where: { id } });
+
+  // Emit real-time event
+  emitBoardEvent(boardId, {
+    type: "column:deleted",
+    columnId: id,
+    userId: session.user.id,
+  });
 
   return NextResponse.json({ success: true });
 }

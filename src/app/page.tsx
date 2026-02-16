@@ -4,7 +4,15 @@ import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import type { Board } from "@/types";
+import { NotificationBell } from "@/components/NotificationBell";
+
+interface TaskSummary {
+  total: number;
+  incomplete: number;
+  overdue: number;
+}
 
 export default function HomePage() {
   const { data: session, status } = useSession();
@@ -15,6 +23,7 @@ export default function HomePage() {
   const [newBoardName, setNewBoardName] = useState("");
   const [newBoardDesc, setNewBoardDesc] = useState("");
   const [creating, setCreating] = useState(false);
+  const [taskSummary, setTaskSummary] = useState<TaskSummary | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -25,8 +34,21 @@ export default function HomePage() {
   useEffect(() => {
     if (session) {
       fetchBoards();
+      fetchTaskSummary();
     }
   }, [session]);
+
+  const fetchTaskSummary = async () => {
+    try {
+      const res = await fetch("/api/my-tasks?status=incomplete");
+      if (res.ok) {
+        const data = await res.json();
+        setTaskSummary(data.summary);
+      }
+    } catch (error) {
+      console.error("Failed to fetch task summary:", error);
+    }
+  };
 
   const fetchBoards = async () => {
     try {
@@ -86,6 +108,26 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <h1 className="text-xl font-bold text-white">Rhythm Kanban</h1>
           <div className="flex items-center gap-4">
+            {/* My Tasks Link */}
+            <Link
+              href="/my-tasks"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+              </svg>
+              <span className="text-sm font-medium">My Tasks</span>
+              {taskSummary && taskSummary.incomplete > 0 && (
+                <span className={`px-1.5 py-0.5 text-xs font-medium rounded-full ${
+                  taskSummary.overdue > 0 
+                    ? "bg-red-500 text-white" 
+                    : "bg-indigo-500 text-white"
+                }`}>
+                  {taskSummary.incomplete}
+                </span>
+              )}
+            </Link>
+            <NotificationBell />
             {session.user?.role === "admin" && (
               <button
                 onClick={() => router.push("/admin")}

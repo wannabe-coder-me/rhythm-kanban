@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { notifyComment, notifyMentioned, parseMentions } from "@/lib/notifications";
 
 export async function GET(
   req: NextRequest,
@@ -80,6 +81,60 @@ export async function POST(
       details: { preview: content.substring(0, 50) },
     },
   });
+
+  // Get current user's name for notifications
+  const currentUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { name: true },
+  });
+  const commenterName = currentUser?.name || "Someone";
+
+  // Notify task creator (if not the commenter)
+  if (task.createdById && task.createdById !== session.user.id) {
+    await notifyComment(
+      task.createdById,
+      task.title,
+      task.id,
+      task.column.board.id,
+      commenterName,
+      true
+    );
+  }
+
+  // Notify assignee (if different from creator and commenter)
+  if (
+    task.assigneeId &&
+    task.assigneeId !== session.user.id &&
+    task.assigneeId !== task.createdById
+  ) {
+    await notifyComment(
+      task.assigneeId,
+      task.title,
+      task.id,
+      task.column.board.id,
+      commenterName,
+      false
+    );
+  }
+
+  // Handle @mentions
+  const mentionedUserIds = await parseMentions(content, task.column.board.id);
+  for (const mentionedUserId of mentionedUserIds) {
+    // Don't notify if already notified as creator/assignee or is the commenter
+    if (
+      mentionedUserId !== session.user.id &&
+      mentionedUserId !== task.createdById &&
+      mentionedUserId !== task.assigneeId
+    ) {
+      await notifyMentioned(
+        mentionedUserId,
+        task.title,
+        task.id,
+        task.column.board.id,
+        commenterName
+      );
+    }
+  }
 
   return NextResponse.json(comment);
 }
