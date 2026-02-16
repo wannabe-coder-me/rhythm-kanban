@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
-import type { Task, User, Comment, Activity, Column, Priority, Attachment, Label } from "@/types";
+import type { Task, User, Comment, Activity, Column, Priority, Attachment, Label, TaskDependency } from "@/types";
 import { format } from "date-fns";
 import clsx from "clsx";
 import { LabelSelector } from "./LabelSelector";
+import { RecurrenceSettings } from "./RecurrenceSettings";
 
 interface TaskDetailPanelProps {
   task: Task | null;
@@ -13,6 +14,7 @@ interface TaskDetailPanelProps {
   users: User[];
   boardId: string;
   availableLabels: Label[];
+  allBoardTasks?: Task[];
   onClose: () => void;
   onUpdate: (taskId: string, updates: Partial<Task> & { labelIds?: string[] }) => void;
   onDelete: (taskId: string) => void;
@@ -34,6 +36,7 @@ export function TaskDetailPanel({
   users,
   boardId,
   availableLabels,
+  allBoardTasks = [],
   onClose,
   onUpdate,
   onDelete,
@@ -57,6 +60,16 @@ export function TaskDetailPanel({
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurrenceRule, setRecurrenceRule] = useState<string | null>(null);
+  const [lastRecurrence, setLastRecurrence] = useState<Date | null>(null);
+  const [parentRecurringId, setParentRecurringId] = useState<string | null>(null);
+  
+  // Dependency state
+  const [blockedBy, setBlockedBy] = useState<TaskDependency[]>([]);
+  const [blocking, setBlocking] = useState<TaskDependency[]>([]);
+  const [showDependencySearch, setShowDependencySearch] = useState(false);
+  const [dependencySearch, setDependencySearch] = useState("");
 
   useEffect(() => {
     if (task) {
@@ -69,6 +82,14 @@ export function TaskDetailPanel({
       setTaskLabels(task.labels || []);
       setSubtasks([]);
       setAttachments([]);
+      setBlockedBy([]);
+      setBlocking([]);
+      setShowDependencySearch(false);
+      setDependencySearch("");
+      setIsRecurring(task.isRecurring || false);
+      setRecurrenceRule(task.recurrenceRule || null);
+      setLastRecurrence(task.lastRecurrence || null);
+      setParentRecurringId(task.parentRecurringId || null);
       fetchTaskDetails();
     }
   }, [task]);
@@ -83,6 +104,8 @@ export function TaskDetailPanel({
         setActivities(data.activities || []);
         setSubtasks(data.subtasks || []);
         setAttachments(data.attachments || []);
+        setBlockedBy(data.blockedBy || []);
+        setBlocking(data.blocking || []);
       }
     } catch (error) {
       console.error("Failed to fetch task details:", error);
@@ -157,6 +180,64 @@ export function TaskDetailPanel({
   };
 
   const completedSubtasks = subtasks.filter((s) => s.completed).length;
+
+  // Dependency functions
+  const addDependency = async (blockedById: string) => {
+    if (!task) return;
+    try {
+      const res = await fetch(`/api/tasks/${task.id}/dependencies`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ blockedById }),
+      });
+      if (res.ok) {
+        const dependency = await res.json();
+        setBlockedBy([...blockedBy, dependency]);
+        setShowDependencySearch(false);
+        setDependencySearch("");
+      } else {
+        const error = await res.json();
+        alert(error.error || "Failed to add dependency");
+      }
+    } catch (error) {
+      console.error("Failed to add dependency:", error);
+      alert("Failed to add dependency");
+    }
+  };
+
+  const removeDependency = async (blockedById: string) => {
+    if (!task) return;
+    try {
+      const res = await fetch(
+        `/api/tasks/${task.id}/dependencies?blockedById=${blockedById}`,
+        { method: "DELETE" }
+      );
+      if (res.ok) {
+        setBlockedBy(blockedBy.filter((d) => d.blockedById !== blockedById));
+      } else {
+        const error = await res.json();
+        alert(error.error || "Failed to remove dependency");
+      }
+    } catch (error) {
+      console.error("Failed to remove dependency:", error);
+      alert("Failed to remove dependency");
+    }
+  };
+
+  // Filter tasks for dependency search (exclude self, already added, and subtasks)
+  const filteredDependencyTasks = allBoardTasks.filter((t) => {
+    if (!task) return false;
+    if (t.id === task.id) return false;
+    if (t.parentId) return false; // Exclude subtasks
+    if (blockedBy.some((d) => d.blockedById === t.id)) return false;
+    if (!dependencySearch) return true;
+    return t.title.toLowerCase().includes(dependencySearch.toLowerCase());
+  });
+
+  // Check if any blockers are incomplete
+  const hasIncompleteBlockers = blockedBy.some(
+    (d) => d.blockedBy && !d.blockedBy.completed
+  );
 
   // Attachment functions
   const uploadFile = async (file: File) => {
@@ -308,6 +389,16 @@ export function TaskDetailPanel({
     }
   };
 
+  const handleRecurrenceChange = (newIsRecurring: boolean, newRule: string | null) => {
+    if (!task) return;
+    setIsRecurring(newIsRecurring);
+    setRecurrenceRule(newRule);
+    onUpdate(task.id, {
+      isRecurring: newIsRecurring,
+      recurrenceRule: newRule,
+    } as Partial<Task>);
+  };
+
   const addComment = async () => {
     if (!task || !newComment.trim()) return;
     try {
@@ -455,6 +546,30 @@ export function TaskDetailPanel({
             </div>
           </div>
 
+          {/* Recurrence - only show for non-instance tasks */}
+          {!parentRecurringId && (
+            <div>
+              <label className="block text-sm font-medium text-slate-400 mb-2">Repeat</label>
+              <RecurrenceSettings
+                isRecurring={isRecurring}
+                recurrenceRule={recurrenceRule}
+                dueDate={dueDate ? new Date(dueDate) : null}
+                lastRecurrence={lastRecurrence}
+                onChange={handleRecurrenceChange}
+              />
+            </div>
+          )}
+          
+          {/* Show recurring parent info for instances */}
+          {parentRecurringId && (
+            <div className="bg-slate-700/50 rounded-lg p-3 text-sm">
+              <span className="text-indigo-400">🔄 Recurring instance</span>
+              <p className="text-slate-400 text-xs mt-1">
+                This task is part of a recurring series
+              </p>
+            </div>
+          )}
+
           {/* Labels */}
           <div>
             <label className="block text-sm font-medium text-slate-400 mb-2">Labels</label>
@@ -466,6 +581,145 @@ export function TaskDetailPanel({
               onCreateLabel={handleCreateLabel}
               onLabelsChange={onLabelsChange}
             />
+          </div>
+
+          {/* Dependencies */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-slate-400">
+                Dependencies
+                {hasIncompleteBlockers && (
+                  <span className="ml-2 text-amber-400 text-xs">🔒 Blocked</span>
+                )}
+              </label>
+            </div>
+
+            {/* Blocked By List */}
+            {blockedBy.length > 0 && (
+              <div className="mb-3">
+                <p className="text-xs text-slate-500 mb-1">Blocked by:</p>
+                <div className="space-y-1">
+                  {blockedBy.map((dep) => (
+                    <div
+                      key={dep.id}
+                      className={clsx(
+                        "flex items-center gap-2 p-2 rounded-lg group",
+                        dep.blockedBy?.completed
+                          ? "bg-green-900/20 border border-green-800/50"
+                          : "bg-amber-900/20 border border-amber-800/50"
+                      )}
+                    >
+                      {dep.blockedBy?.completed ? (
+                        <svg className="w-4 h-4 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4 text-amber-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                      )}
+                      <span className={clsx(
+                        "flex-1 text-sm truncate",
+                        dep.blockedBy?.completed ? "text-slate-400 line-through" : "text-white"
+                      )}>
+                        {dep.blockedBy?.title || "Unknown task"}
+                      </span>
+                      <span className="text-xs text-slate-500">
+                        {dep.blockedBy?.column?.name}
+                      </span>
+                      <button
+                        onClick={() => removeDependency(dep.blockedById)}
+                        className="opacity-0 group-hover:opacity-100 p-1 text-slate-500 hover:text-red-400 transition-all"
+                        title="Remove dependency"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Blocking List */}
+            {blocking.length > 0 && (
+              <div className="mb-3">
+                <p className="text-xs text-slate-500 mb-1">Blocking:</p>
+                <div className="space-y-1">
+                  {blocking.map((dep) => (
+                    <div
+                      key={dep.id}
+                      className="flex items-center gap-2 p-2 bg-slate-700/50 rounded-lg"
+                    >
+                      <svg className="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                      </svg>
+                      <span className="flex-1 text-sm text-slate-300 truncate">
+                        {dep.task?.title || "Unknown task"}
+                      </span>
+                      <span className="text-xs text-slate-500">
+                        {dep.task?.column?.name}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Add Dependency */}
+            {showDependencySearch ? (
+              <div className="relative">
+                <input
+                  type="text"
+                  value={dependencySearch}
+                  onChange={(e) => setDependencySearch(e.target.value)}
+                  placeholder="Search tasks..."
+                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  autoFocus
+                />
+                {/* Task dropdown */}
+                <div className="absolute top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-10">
+                  {filteredDependencyTasks.length === 0 ? (
+                    <div className="p-3 text-sm text-slate-500 text-center">
+                      {dependencySearch ? "No matching tasks" : "No tasks available"}
+                    </div>
+                  ) : (
+                    filteredDependencyTasks.slice(0, 10).map((t) => (
+                      <button
+                        key={t.id}
+                        onClick={() => addDependency(t.id)}
+                        className="w-full flex items-center gap-2 p-2 hover:bg-slate-700 text-left transition-colors"
+                      >
+                        <span className="flex-1 text-sm text-white truncate">{t.title}</span>
+                        <span className="text-xs text-slate-500">{t.column?.name}</span>
+                      </button>
+                    ))
+                  )}
+                </div>
+                <button
+                  onClick={() => {
+                    setShowDependencySearch(false);
+                    setDependencySearch("");
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowDependencySearch(true)}
+                className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Add dependency
+              </button>
+            )}
           </div>
 
           {/* Description */}

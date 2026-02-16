@@ -13,6 +13,7 @@ interface TaskCardProps {
   task: Task;
   onClick: () => void;
   onToggleSubtask?: (subtaskId: string, completed: boolean) => void;
+  isSelected?: boolean;
 }
 
 const priorityColors: Record<Priority, string> = {
@@ -29,7 +30,7 @@ const priorityBorders: Record<Priority, string> = {
   urgent: "border-l-red-500",
 };
 
-export function TaskCard({ task, onClick, onToggleSubtask }: TaskCardProps) {
+export function TaskCard({ task, onClick, onToggleSubtask, isSelected = false }: TaskCardProps) {
   const [subtasksExpanded, setSubtasksExpanded] = useState(false);
   
   const {
@@ -65,7 +66,7 @@ export function TaskCard({ task, onClick, onToggleSubtask }: TaskCardProps) {
   };
 
   return (
-    <div ref={setNodeRef} style={style}>
+    <div ref={setNodeRef} style={style} data-task-id={task.id}>
       {/* Main Task Card */}
       <div
         {...attributes}
@@ -78,7 +79,8 @@ export function TaskCard({ task, onClick, onToggleSubtask }: TaskCardProps) {
           "bg-slate-700 hover:bg-slate-650 border border-slate-600 rounded-lg p-3 cursor-pointer transition-all",
           "border-l-4",
           priorityBorders[task.priority as Priority],
-          isDragging && "opacity-50 shadow-2xl rotate-2"
+          isDragging && "opacity-50 shadow-2xl rotate-2",
+          isSelected && "ring-2 ring-indigo-500 ring-offset-2 ring-offset-slate-800"
         )}
       >
         <h4 className="text-sm font-medium text-white mb-2">{task.title}</h4>

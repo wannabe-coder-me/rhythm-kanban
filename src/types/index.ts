@@ -48,6 +48,19 @@ export interface Column {
   tasks?: Task[];
 }
 
+export type RecurrenceFrequency = "daily" | "weekly" | "monthly" | "yearly";
+
+export interface RecurrenceRule {
+  frequency: RecurrenceFrequency;
+  interval: number;           // Every N days/weeks/months/years
+  daysOfWeek?: number[];      // 0-6 (Sun-Sat) for weekly
+  dayOfMonth?: number;        // 1-31 for monthly by date
+  weekOfMonth?: number;       // 1-5 for monthly by week (e.g., "2nd Tuesday")
+  endType: "never" | "date" | "count";
+  endDate?: string;           // ISO date string
+  endCount?: number;          // Number of occurrences
+}
+
 export interface Task {
   id: string;
   columnId: string;
@@ -63,6 +76,13 @@ export interface Task {
   parentId: string | null;
   createdAt: Date;
   updatedAt: Date;
+  // Recurring task fields
+  isRecurring: boolean;
+  recurrenceRule: string | null;  // JSON string of RecurrenceRule
+  recurrenceEnd: Date | null;
+  lastRecurrence: Date | null;
+  parentRecurringId: string | null;
+  // Relations
   assignee?: User | null;
   createdBy?: User;
   comments?: Comment[];
@@ -70,7 +90,11 @@ export interface Task {
   subtasks?: Task[];
   parent?: Task;
   attachments?: Attachment[];
-  _count?: { attachments?: number };
+  parentRecurring?: Task;
+  recurringInstances?: Task[];
+  blockedBy?: TaskDependency[];
+  blocking?: TaskDependency[];
+  _count?: { attachments?: number; recurringInstances?: number; blockedBy?: number };
 }
 
 export interface Comment {
@@ -117,4 +141,15 @@ export interface BoardInvite {
   acceptedAt?: Date | null;
   board?: Board;
   invitedBy?: User;
+}
+
+export interface TaskDependency {
+  id: string;
+  taskId: string;
+  blockedById: string;
+  createdAt: Date;
+  createdById: string;
+  task?: Task;
+  blockedBy?: Task;
+  createdBy?: User;
 }

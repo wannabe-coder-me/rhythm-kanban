@@ -45,6 +45,34 @@ export async function GET(
         include: { uploadedBy: true },
         orderBy: { createdAt: "desc" },
       },
+      blockedBy: {
+        include: {
+          blockedBy: {
+            select: {
+              id: true,
+              title: true,
+              completed: true,
+              columnId: true,
+              column: { select: { name: true } },
+            },
+          },
+          createdBy: { select: { id: true, name: true, email: true } },
+        },
+      },
+      blocking: {
+        include: {
+          task: {
+            select: {
+              id: true,
+              title: true,
+              completed: true,
+              columnId: true,
+              column: { select: { name: true } },
+            },
+          },
+          createdBy: { select: { id: true, name: true, email: true } },
+        },
+      },
     },
   });
 

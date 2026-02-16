@@ -19,6 +19,7 @@ interface ColumnProps {
   onAddTask: (columnId: string, title: string) => void;
   onDeleteColumn?: () => void;
   onToggleSubtask?: (subtaskId: string, completed: boolean) => void;
+  selectedTaskId?: string | null;
 }
 
 export function Column({
@@ -28,6 +29,7 @@ export function Column({
   onAddTask,
   onDeleteColumn,
   onToggleSubtask,
+  selectedTaskId,
 }: ColumnProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -136,6 +138,7 @@ export function Column({
               task={task}
               onClick={() => onTaskClick(task)}
               onToggleSubtask={onToggleSubtask}
+              isSelected={selectedTaskId === task.id}
             />
           ))}
         </SortableContext>

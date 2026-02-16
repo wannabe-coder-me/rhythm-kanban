@@ -35,6 +35,8 @@ import { PresenceIndicator } from "@/components/PresenceIndicator";
 import { LabelManager } from "@/components/LabelManager";
 import { BoardSettings } from "@/components/BoardSettings";
 import { InviteModal } from "@/components/InviteModal";
+import { KeyboardShortcutsModal, KeyboardShortcutsButton } from "@/components/KeyboardShortcutsModal";
+import { useKeyboardShortcuts, ShortcutHandler } from "@/hooks/useKeyboardShortcuts";
 
 type DragType = "task" | "column";
 
@@ -62,7 +64,13 @@ function BoardPageContent() {
   const [showBoardSettings, setShowBoardSettings] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [availableLabels, setAvailableLabels] = useState<Label[]>([]);
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
   const { toasts, addToast, dismissToast } = useToasts();
+  
+  // Refs for focusing elements
+  const filterInputRef = useRef<HTMLInputElement>(null);
 
   // Use the new filter system
   const {
@@ -604,6 +612,288 @@ function BoardPageContent() {
   // Column IDs for sortable context
   const columnIds = useMemo(() => columns.map((col) => col.id), [columns]);
 
+  // Get all navigable tasks (flat list of parent tasks)
+  const allNavigableTasks = useMemo(() => {
+    return filteredColumns.flatMap((col) => col.tasks || []);
+  }, [filteredColumns]);
+
+  // Keyboard navigation helpers
+  const selectNextTask = useCallback(() => {
+    if (allNavigableTasks.length === 0) return;
+    
+    if (!selectedTaskId) {
+      // Select first task
+      const firstTask = allNavigableTasks[0];
+      if (firstTask) {
+        setSelectedTaskId(firstTask.id);
+        addToast(`Selected: ${firstTask.title}`, "info", 1500);
+      }
+      return;
+    }
+    
+    const currentIndex = allNavigableTasks.findIndex((t) => t.id === selectedTaskId);
+    const nextIndex = Math.min(currentIndex + 1, allNavigableTasks.length - 1);
+    const nextTask = allNavigableTasks[nextIndex];
+    if (nextTask && nextTask.id !== selectedTaskId) {
+      setSelectedTaskId(nextTask.id);
+    }
+  }, [allNavigableTasks, selectedTaskId, addToast]);
+
+  const selectPreviousTask = useCallback(() => {
+    if (allNavigableTasks.length === 0) return;
+    
+    if (!selectedTaskId) {
+      // Select last task
+      const lastTask = allNavigableTasks[allNavigableTasks.length - 1];
+      if (lastTask) {
+        setSelectedTaskId(lastTask.id);
+        addToast(`Selected: ${lastTask.title}`, "info", 1500);
+      }
+      return;
+    }
+    
+    const currentIndex = allNavigableTasks.findIndex((t) => t.id === selectedTaskId);
+    const prevIndex = Math.max(currentIndex - 1, 0);
+    const prevTask = allNavigableTasks[prevIndex];
+    if (prevTask && prevTask.id !== selectedTaskId) {
+      setSelectedTaskId(prevTask.id);
+    }
+  }, [allNavigableTasks, selectedTaskId, addToast]);
+
+  const openSelectedTask = useCallback(() => {
+    if (!selectedTaskId) return;
+    const task = allNavigableTasks.find((t) => t.id === selectedTaskId);
+    if (task) {
+      setSelectedTask(task);
+    }
+  }, [selectedTaskId, allNavigableTasks]);
+
+  const toggleSelectedTaskComplete = useCallback(async () => {
+    const task = selectedTask || allNavigableTasks.find((t) => t.id === selectedTaskId);
+    if (!task) return;
+    
+    await handleUpdateTask(task.id, { completed: !task.completed });
+    addToast(task.completed ? "Task marked incomplete" : "Task marked complete", "success", 2000);
+  }, [selectedTask, selectedTaskId, allNavigableTasks, handleUpdateTask, addToast]);
+
+  const cyclePriority = useCallback(async () => {
+    const task = selectedTask || allNavigableTasks.find((t) => t.id === selectedTaskId);
+    if (!task) return;
+    
+    const priorities: Priority[] = ["low", "medium", "high", "urgent"];
+    const currentIndex = priorities.indexOf(task.priority as Priority);
+    const nextIndex = (currentIndex + 1) % priorities.length;
+    const newPriority = priorities[nextIndex];
+    
+    await handleUpdateTask(task.id, { priority: newPriority });
+    addToast(`Priority: ${newPriority}`, "info", 2000);
+  }, [selectedTask, selectedTaskId, allNavigableTasks, handleUpdateTask, addToast]);
+
+  const deleteSelectedTask = useCallback(async () => {
+    const task = selectedTask || allNavigableTasks.find((t) => t.id === selectedTaskId);
+    if (!task) return;
+    
+    await handleDeleteTask(task.id);
+    setSelectedTaskId(null);
+  }, [selectedTask, selectedTaskId, allNavigableTasks, handleDeleteTask]);
+
+  // Define all keyboard shortcuts
+  const shortcuts: ShortcutHandler[] = useMemo(() => [
+    // Global shortcuts
+    {
+      key: "?",
+      description: "Show keyboard shortcuts",
+      category: "global",
+      handler: () => setShowKeyboardShortcuts((prev) => !prev),
+    },
+    {
+      key: "g h",
+      description: "Go to home (board list)",
+      category: "global",
+      handler: () => router.push("/"),
+    },
+    {
+      key: "g m",
+      description: "Go to my tasks",
+      category: "global",
+      handler: () => router.push("/my-tasks"),
+    },
+    {
+      key: "g n",
+      description: "Go to notifications",
+      category: "global",
+      handler: () => router.push("/notifications"),
+    },
+    
+    // Board view shortcuts
+    {
+      key: "n",
+      description: "New task (quick add)",
+      category: "board",
+      handler: () => {
+        // Find first column and trigger add task
+        const firstCol = filteredColumns[0];
+        if (firstCol) {
+          // Click the add task button in first column
+          const addButton = document.querySelector(`[data-column-id="${firstCol.id}"] [data-add-task]`);
+          if (addButton) {
+            (addButton as HTMLButtonElement).click();
+          } else {
+            addToast("Focus a column to add a task", "info", 2000);
+          }
+        }
+      },
+    },
+    {
+      key: "c",
+      description: "New column",
+      category: "board",
+      handler: () => setShowAddColumn(true),
+    },
+    {
+      key: "f",
+      description: "Focus search/filter",
+      category: "board",
+      handler: () => {
+        const searchInput = document.querySelector('[data-filter-search]') as HTMLInputElement;
+        if (searchInput) {
+          searchInput.focus();
+        }
+      },
+    },
+    {
+      key: "escape",
+      description: "Close any open panel/modal",
+      category: "board",
+      handler: () => {
+        if (showKeyboardShortcuts) {
+          setShowKeyboardShortcuts(false);
+        } else if (selectedTask) {
+          setSelectedTask(null);
+        } else if (showLabelManager) {
+          setShowLabelManager(false);
+        } else if (showBoardSettings) {
+          setShowBoardSettings(false);
+        } else if (showInviteModal) {
+          setShowInviteModal(false);
+        } else if (showAddColumn) {
+          setShowAddColumn(false);
+        } else {
+          setSelectedTaskId(null);
+        }
+      },
+    },
+    
+    // Task navigation
+    {
+      key: "j",
+      description: "Next task",
+      category: "navigation",
+      handler: selectNextTask,
+    },
+    {
+      key: "arrowdown",
+      description: "Next task",
+      category: "navigation",
+      handler: selectNextTask,
+    },
+    {
+      key: "k",
+      description: "Previous task",
+      category: "navigation",
+      handler: selectPreviousTask,
+    },
+    {
+      key: "arrowup",
+      description: "Previous task",
+      category: "navigation",
+      handler: selectPreviousTask,
+    },
+    {
+      key: "enter",
+      description: "Open selected task",
+      category: "navigation",
+      handler: openSelectedTask,
+    },
+    
+    // Task actions
+    {
+      key: "e",
+      description: "Edit task (focus title)",
+      category: "task",
+      handler: () => {
+        if (!selectedTask && selectedTaskId) {
+          openSelectedTask();
+        }
+        // Focus the title input after a small delay
+        setTimeout(() => {
+          const titleInput = document.querySelector('[data-task-title-input]') as HTMLInputElement;
+          if (titleInput) {
+            titleInput.focus();
+            titleInput.select();
+          }
+        }, 100);
+      },
+    },
+    {
+      key: "d",
+      description: "Mark done / toggle complete",
+      category: "task",
+      handler: toggleSelectedTaskComplete,
+    },
+    {
+      key: "p",
+      description: "Cycle priority",
+      category: "task",
+      handler: cyclePriority,
+    },
+    {
+      key: "delete",
+      description: "Delete task",
+      category: "task",
+      handler: deleteSelectedTask,
+    },
+    {
+      key: "backspace",
+      description: "Delete task",
+      category: "task",
+      handler: deleteSelectedTask,
+    },
+  ], [
+    router,
+    filteredColumns,
+    addToast,
+    selectedTask,
+    showKeyboardShortcuts,
+    showLabelManager,
+    showBoardSettings,
+    showInviteModal,
+    showAddColumn,
+    selectNextTask,
+    selectPreviousTask,
+    openSelectedTask,
+    toggleSelectedTaskComplete,
+    cyclePriority,
+    deleteSelectedTask,
+    selectedTaskId,
+  ]);
+
+  // Register keyboard shortcuts
+  useKeyboardShortcuts({
+    shortcuts,
+    enabled: !loading && !!board,
+  });
+
+  // Scroll selected task into view
+  useEffect(() => {
+    if (selectedTaskId) {
+      const taskElement = document.querySelector(`[data-task-id="${selectedTaskId}"]`);
+      if (taskElement) {
+        taskElement.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    }
+  }, [selectedTaskId]);
+
   if (status === "loading" || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-900">
@@ -681,15 +971,33 @@ function BoardPageContent() {
               </svg>
               My Tasks
             </Link>
-            <Link
-              href={`/boards/${boardId}/table`}
-              className="flex items-center gap-2 text-slate-400 hover:text-white text-sm transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-              </svg>
-              Table View
-            </Link>
+            {/* View Switcher */}
+            <div className="hidden sm:flex items-center bg-slate-700 rounded-lg p-0.5">
+              <div className="flex items-center gap-2 px-3 py-1.5 text-sm text-white bg-slate-600 rounded-md">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+                </svg>
+                Kanban
+              </div>
+              <Link
+                href={`/boards/${boardId}/table`}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm text-slate-400 hover:text-white rounded-md transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                </svg>
+                Table
+              </Link>
+              <Link
+                href={`/boards/${boardId}/calendar`}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm text-slate-400 hover:text-white rounded-md transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Calendar
+              </Link>
+            </div>
             {/* Real-time presence indicator */}
             <PresenceIndicator
               users={connectedUsers}
@@ -704,6 +1012,7 @@ function BoardPageContent() {
                 Reconnecting...
               </div>
             )}
+            <KeyboardShortcutsButton onClick={() => setShowKeyboardShortcuts(true)} />
             <NotificationBell />
             {session.user?.image && (
               <Image

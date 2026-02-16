@@ -29,6 +29,7 @@ model User {
   activities       Activity[]
   attachments      Attachment[]
   notifications    Notification[]
+  taskDependencies TaskDependency[]
 }
 
 model Notification {
@@ -149,6 +150,13 @@ model Task {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   
+  // Recurring task fields
+  isRecurring       Boolean   @default(false)
+  recurrenceRule    String?   // JSON: {"frequency":"daily"|"weekly"|"monthly"|"yearly","interval":1,"daysOfWeek":[0-6],"dayOfMonth":1-31,"weekOfMonth":1-5,"endType":"never"|"date"|"count","endDate":ISO,"endCount":N}
+  recurrenceEnd     DateTime? // Resolved end date for recurrence
+  lastRecurrence    DateTime? // When the last instance was created
+  parentRecurringId String?   // If this task was created from a recurring template
+  
   column      Column    @relation(fields: [columnId], references: [id], onDelete: Cascade)
   assignee    User?     @relation("TaskAssignee", fields: [assigneeId], references: [id])
   createdBy   User      @relation("TaskCreator", fields: [createdById], references: [id])
@@ -158,6 +166,25 @@ model Task {
   activities  Activity[]
   attachments Attachment[]
   labels      Label[]   @relation("TaskLabels")
+  
+  parentRecurring    Task?     @relation("RecurringInstances", fields: [parentRecurringId], references: [id], onDelete: SetNull)
+  recurringInstances Task[]    @relation("RecurringInstances")
+  blockedBy          TaskDependency[] @relation("BlockedTask")
+  blocking           TaskDependency[] @relation("BlockingTask")
+}
+
+model TaskDependency {
+  id            String   @id @default(uuid())
+  taskId        String   // The task that is blocked
+  blockedById   String   // The task that blocks it
+  createdAt     DateTime @default(now())
+  createdById   String
+  
+  task          Task     @relation("BlockedTask", fields: [taskId], references: [id], onDelete: Cascade)
+  blockedBy     Task     @relation("BlockingTask", fields: [blockedById], references: [id], onDelete: Cascade)
+  createdBy     User     @relation(fields: [createdById], references: [id])
+  
+  @@unique([taskId, blockedById])
 }
 
 model Label {

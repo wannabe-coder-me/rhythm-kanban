@@ -48,7 +48,11 @@ export async function GET(
                 },
               },
               _count: {
-                select: { attachments: true },
+                select: { attachments: true, blockedBy: true },
+              },
+              blockedBy: {
+                where: { blockedBy: { completed: false } },
+                select: { id: true },
               },
             },
           },
