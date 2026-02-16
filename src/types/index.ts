@@ -29,6 +29,7 @@ export interface Board {
   columns?: Column[];
   members?: BoardMember[];
   labels?: Label[];
+  customFields?: CustomField[];
 }
 
 export interface BoardMember {
@@ -68,6 +69,7 @@ export interface Task {
   description: string | null;
   position: number;
   priority: Priority;
+  startDate: Date | null;
   dueDate: Date | null;
   labels: Label[];
   completed: boolean;
@@ -94,6 +96,7 @@ export interface Task {
   recurringInstances?: Task[];
   blockedBy?: TaskDependency[];
   blocking?: TaskDependency[];
+  customFieldValues?: CustomFieldValue[];
   _count?: { attachments?: number; recurringInstances?: number; blockedBy?: number };
 }
 
@@ -152,4 +155,42 @@ export interface TaskDependency {
   task?: Task;
   blockedBy?: Task;
   createdBy?: User;
+}
+
+export interface TaskTemplate {
+  id: string;
+  boardId: string;
+  name: string;
+  title: string;
+  description: string | null;
+  priority: Priority;
+  labels: string[];
+  subtasks: string[];
+  createdById: string;
+  createdAt: Date;
+  updatedAt: Date;
+  createdBy?: User;
+}
+
+export type FieldType = 'text' | 'number' | 'date' | 'select' | 'checkbox' | 'url';
+
+export interface CustomField {
+  id: string;
+  boardId: string;
+  name: string;
+  type: FieldType;
+  options: string | null;  // JSON array for select type
+  required: boolean;
+  position: number;
+  createdAt: Date;
+}
+
+export interface CustomFieldValue {
+  id: string;
+  taskId: string;
+  customFieldId: string;
+  value: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  customField?: CustomField;
 }

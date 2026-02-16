@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isAdmin } from "@/lib/permissions";
+import { getTemplateById } from "@/lib/board-templates";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -65,8 +66,8 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { name, description, visibility = "private" } = body;
-  console.log("[POST /api/boards] Creating board:", name, "for user:", session.user.id);
+  const { name, description, visibility = "private", templateId } = body;
+  console.log("[POST /api/boards] Creating board:", name, "for user:", session.user.id, "template:", templateId);
 
   if (!name?.trim()) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
@@ -76,6 +77,15 @@ export async function POST(req: NextRequest) {
   if (!["private", "team", "public"].includes(visibility)) {
     return NextResponse.json({ error: "Invalid visibility" }, { status: 400 });
   }
+
+  // Get template config (default to blank template columns if no template)
+  const template = templateId ? getTemplateById(templateId) : null;
+  const columns = template?.columns ?? [
+    { name: "To Do", color: "#6366f1" },
+    { name: "In Progress", color: "#f59e0b" },
+    { name: "Done", color: "#22c55e" },
+  ];
+  const labels = template?.labels ?? [];
 
   try {
     const board = await prisma.board.create({
@@ -94,22 +104,31 @@ export async function POST(req: NextRequest) {
         },
         columns: {
           createMany: {
-            data: [
-              { name: "To Do", position: 0, color: "#6366f1" },
-              { name: "In Progress", position: 1, color: "#f59e0b" },
-              { name: "Done", position: 2, color: "#22c55e" },
-            ],
+            data: columns.map((col, index) => ({
+              name: col.name,
+              position: index,
+              color: col.color,
+            })),
           },
         },
+        labels: labels.length > 0 ? {
+          createMany: {
+            data: labels.map((label) => ({
+              name: label.name,
+              color: label.color,
+            })),
+          },
+        } : undefined,
       },
       include: {
         owner: { select: { id: true, name: true, email: true, image: true } },
         columns: { orderBy: { position: "asc" } },
         members: { include: { user: true } },
+        labels: true,
       },
     });
 
-    console.log("[POST /api/boards] Board created:", board.id);
+    console.log("[POST /api/boards] Board created:", board.id, "with", columns.length, "columns and", labels.length, "labels");
     return NextResponse.json(board);
   } catch (error) {
     console.error("[POST /api/boards] Error creating board:", error);

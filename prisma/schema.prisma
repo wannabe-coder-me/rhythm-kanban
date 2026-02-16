@@ -30,6 +30,7 @@ model User {
   attachments      Attachment[]
   notifications    Notification[]
   taskDependencies TaskDependency[]
+  taskTemplates    TaskTemplate[]
 }
 
 model Notification {
@@ -82,11 +83,29 @@ model Board {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   
-  owner       User          @relation("BoardOwner", fields: [ownerId], references: [id])
-  columns     Column[]
-  members     BoardMember[]
-  labels      Label[]
-  invites     BoardInvite[]
+  owner         User              @relation("BoardOwner", fields: [ownerId], references: [id])
+  columns       Column[]
+  members       BoardMember[]
+  labels        Label[]
+  invites       BoardInvite[]
+  emailAddress  BoardEmailAddress?
+  customFields  CustomField[]
+  taskTemplates TaskTemplate[]
+}
+
+model BoardEmailAddress {
+  id              String   @id @default(uuid())
+  boardId         String   @unique
+  email           String   @unique  // Generated unique email like board-abc123@kanban.rhythm.engineering
+  columnId        String?  // Default column for new tasks
+  isActive        Boolean  @default(true)
+  autoAssign      Boolean  @default(false)  // Auto-assign to sender if they're a member
+  requireMember   Boolean  @default(false)  // Only accept emails from board members
+  createdAt       DateTime @default(now())
+  
+  board           Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  
+  @@index([email])
 }
 
 model BoardMember {
@@ -142,6 +161,7 @@ model Task {
   description String?
   position    Int
   priority    String    @default("medium")
+  startDate   DateTime? // Start date for timeline view
   dueDate     DateTime?
   completed   Boolean   @default(false)
   assigneeId  String?
@@ -171,6 +191,7 @@ model Task {
   recurringInstances Task[]    @relation("RecurringInstances")
   blockedBy          TaskDependency[] @relation("BlockedTask")
   blocking           TaskDependency[] @relation("BlockingTask")
+  customFieldValues  CustomFieldValue[]
 }
 
 model TaskDependency {
@@ -233,4 +254,53 @@ model Attachment {
   
   task         Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
   uploadedBy   User     @relation(fields: [uploadedById], references: [id])
+}
+
+model CustomField {
+  id        String   @id @default(uuid())
+  boardId   String
+  name      String
+  type      String   // "text", "number", "date", "select", "checkbox", "url"
+  options   String?  // JSON array for select type options
+  required  Boolean  @default(false)
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+  
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  values    CustomFieldValue[]
+  
+  @@unique([boardId, name])
+}
+
+model CustomFieldValue {
+  id            String   @id @default(uuid())
+  taskId        String
+  customFieldId String
+  value         String?  // Stored as string, parsed based on field type
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  task          Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  customField   CustomField @relation(fields: [customFieldId], references: [id], onDelete: Cascade)
+  
+  @@unique([taskId, customFieldId])
+}
+
+model TaskTemplate {
+  id          String   @id @default(uuid())
+  boardId     String
+  name        String   // Template name for display
+  title       String   // Default task title (can include {placeholders})
+  description String?
+  priority    String   @default("medium")
+  labels      String[] // Label IDs to apply
+  subtasks    String[] // Array of subtask titles to create
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  board       Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  
+  @@unique([boardId, name])
 }

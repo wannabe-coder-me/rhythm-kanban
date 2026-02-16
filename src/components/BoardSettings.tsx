@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
-import type { Board, BoardMember, User, BoardVisibility, BoardInvite } from "@/types";
+import type { Board, BoardMember, User, BoardVisibility, BoardInvite, Column } from "@/types";
 
 interface BoardSettingsProps {
   board: Board;
@@ -13,7 +13,18 @@ interface BoardSettingsProps {
   onBoardDelete: () => void;
 }
 
-type Tab = "general" | "members" | "danger";
+type Tab = "general" | "members" | "integrations" | "danger";
+
+interface BoardEmailAddress {
+  id: string;
+  boardId: string;
+  email: string;
+  columnId: string | null;
+  isActive: boolean;
+  autoAssign: boolean;
+  requireMember: boolean;
+  createdAt: string;
+}
 
 interface MemberWithOwner extends BoardMember {
   isOwner?: boolean;
@@ -49,6 +60,12 @@ export function BoardSettings({
   const [newOwnerId, setNewOwnerId] = useState("");
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
 
+  // Email-to-task state
+  const [emailSettings, setEmailSettings] = useState<BoardEmailAddress | null>(null);
+  const [emailColumns, setEmailColumns] = useState<Column[]>([]);
+  const [loadingEmail, setLoadingEmail] = useState(false);
+  const [emailCopied, setEmailCopied] = useState(false);
+
   // Determine current user's role
   const isOwner = board.ownerId === currentUserId;
   const currentMember = board.members?.find((m) => m.userId === currentUserId);
@@ -81,6 +98,23 @@ export function BoardSettings({
       }
     } catch (err) {
       console.error("Failed to fetch invites:", err);
+    }
+  }, [board.id]);
+
+  // Fetch email settings
+  const fetchEmailSettings = useCallback(async () => {
+    setLoadingEmail(true);
+    try {
+      const res = await fetch(`/api/boards/${board.id}/email`);
+      if (res.ok) {
+        const data = await res.json();
+        setEmailSettings(data.emailAddress);
+        setEmailColumns(data.columns || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch email settings:", err);
+    } finally {
+      setLoadingEmail(false);
     }
   }, [board.id]);
 
@@ -118,7 +152,10 @@ export function BoardSettings({
         fetchPendingInvites();
       }
     }
-  }, [isOpen, activeTab, fetchMembers, fetchPendingInvites, canEdit]);
+    if (isOpen && activeTab === "integrations") {
+      fetchEmailSettings();
+    }
+  }, [isOpen, activeTab, fetchMembers, fetchPendingInvites, fetchEmailSettings, canEdit]);
 
   // Reset state when board changes
   useEffect(() => {
@@ -257,6 +294,85 @@ export function BoardSettings({
     }
   };
 
+  // Enable email-to-task
+  const handleEnableEmail = async () => {
+    clearMessages();
+    setLoadingEmail(true);
+    try {
+      const res = await fetch(`/api/boards/${board.id}/email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ columnId: emailColumns[0]?.id }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setEmailSettings(data);
+        setSuccess("Email-to-task enabled!");
+      } else {
+        const data = await res.json();
+        setError(data.error || "Failed to enable email-to-task");
+      }
+    } catch (err) {
+      setError("Failed to enable email-to-task");
+    } finally {
+      setLoadingEmail(false);
+    }
+  };
+
+  // Update email settings
+  const handleUpdateEmailSettings = async (updates: Partial<BoardEmailAddress>) => {
+    clearMessages();
+    try {
+      const res = await fetch(`/api/boards/${board.id}/email`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setEmailSettings(data);
+        setSuccess("Settings updated!");
+      } else {
+        const data = await res.json();
+        setError(data.error || "Failed to update settings");
+      }
+    } catch (err) {
+      setError("Failed to update settings");
+    }
+  };
+
+  // Disable email-to-task
+  const handleDisableEmail = async () => {
+    if (!confirm("Disable email-to-task? The email address will be removed.")) return;
+    clearMessages();
+    setLoadingEmail(true);
+    try {
+      const res = await fetch(`/api/boards/${board.id}/email`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setEmailSettings(null);
+        setSuccess("Email-to-task disabled!");
+      } else {
+        const data = await res.json();
+        setError(data.error || "Failed to disable email-to-task");
+      }
+    } catch (err) {
+      setError("Failed to disable email-to-task");
+    } finally {
+      setLoadingEmail(false);
+    }
+  };
+
+  // Copy email to clipboard
+  const handleCopyEmail = () => {
+    if (emailSettings?.email) {
+      navigator.clipboard.writeText(emailSettings.email);
+      setEmailCopied(true);
+      setTimeout(() => setEmailCopied(false), 2000);
+    }
+  };
+
   // Delete board
   const handleDeleteBoard = async () => {
     if (deleteConfirmation !== board.name) {
@@ -308,6 +424,7 @@ export function BoardSettings({
           {[
             { id: "general", label: "General" },
             { id: "members", label: "Members" },
+            { id: "integrations", label: "Integrations", show: canEdit },
             { id: "danger", label: "Danger Zone", show: isOwner },
           ]
             .filter((tab) => tab.show !== false)
@@ -585,6 +702,211 @@ export function BoardSettings({
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Integrations Tab */}
+          {activeTab === "integrations" && canEdit && (
+            <div className="space-y-6">
+              {/* Email-to-Task Section */}
+              <div className="border border-slate-600 rounded-lg p-4">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-lg bg-indigo-500/20 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-medium text-white">Email-to-Task</h3>
+                    <p className="text-slate-400 text-sm">Create tasks by sending emails to this board</p>
+                  </div>
+                </div>
+
+                {loadingEmail ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-indigo-500"></div>
+                  </div>
+                ) : !emailSettings ? (
+                  // Not enabled yet
+                  <div className="bg-slate-700/30 rounded-lg p-4">
+                    <p className="text-slate-300 text-sm mb-4">
+                      Enable email-to-task to get a unique email address for this board.
+                      Anyone who emails this address will create a new task.
+                    </p>
+                    <button
+                      onClick={handleEnableEmail}
+                      className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded font-medium transition-colors"
+                    >
+                      Enable Email-to-Task
+                    </button>
+                  </div>
+                ) : (
+                  // Enabled - show settings
+                  <div className="space-y-4">
+                    {/* Email address with copy button */}
+                    <div className="bg-slate-700/50 rounded-lg p-4">
+                      <label className="block text-sm font-medium text-slate-400 mb-2">
+                        Board Email Address
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 bg-slate-800 border border-slate-600 rounded px-3 py-2 text-white font-mono text-sm">
+                          {emailSettings.email}
+                        </div>
+                        <button
+                          onClick={handleCopyEmail}
+                          className={`px-3 py-2 rounded font-medium transition-colors flex items-center gap-2 ${
+                            emailCopied
+                              ? "bg-green-600 text-white"
+                              : "bg-slate-600 hover:bg-slate-500 text-white"
+                          }`}
+                        >
+                          {emailCopied ? (
+                            <>
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                              Copied!
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                              Copy
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Instructions */}
+                    <div className="bg-slate-700/30 rounded-lg p-4 border border-dashed border-slate-600">
+                      <h4 className="text-sm font-medium text-slate-300 mb-2">How it works</h4>
+                      <ul className="text-slate-400 text-sm space-y-1">
+                        <li>• Forward or send emails to the address above</li>
+                        <li>• Email subject becomes the task title</li>
+                        <li>• Email body becomes the task description</li>
+                        <li>• Sender info is included in the description</li>
+                      </ul>
+                    </div>
+
+                    {/* Settings */}
+                    <div className="space-y-4">
+                      {/* Active toggle */}
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <label className="text-sm font-medium text-slate-300">Enabled</label>
+                          <p className="text-slate-500 text-xs">Accept incoming emails</p>
+                        </div>
+                        <button
+                          onClick={() => handleUpdateEmailSettings({ isActive: !emailSettings.isActive })}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                            emailSettings.isActive ? "bg-indigo-600" : "bg-slate-600"
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                              emailSettings.isActive ? "translate-x-6" : "translate-x-1"
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      {/* Default column */}
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-2">
+                          Default Column
+                        </label>
+                        <select
+                          value={emailSettings.columnId || ""}
+                          onChange={(e) => handleUpdateEmailSettings({ columnId: e.target.value || null })}
+                          className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                          {emailColumns.map((col) => (
+                            <option key={col.id} value={col.id}>
+                              {col.name}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-slate-500 text-xs mt-1">
+                          New tasks from emails will be added to this column
+                        </p>
+                      </div>
+
+                      {/* Auto-assign toggle */}
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <label className="text-sm font-medium text-slate-300">Auto-assign to sender</label>
+                          <p className="text-slate-500 text-xs">If sender is a board member, assign task to them</p>
+                        </div>
+                        <button
+                          onClick={() => handleUpdateEmailSettings({ autoAssign: !emailSettings.autoAssign })}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                            emailSettings.autoAssign ? "bg-indigo-600" : "bg-slate-600"
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                              emailSettings.autoAssign ? "translate-x-6" : "translate-x-1"
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      {/* Require member toggle */}
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <label className="text-sm font-medium text-slate-300">Require membership</label>
+                          <p className="text-slate-500 text-xs">Only accept emails from board members</p>
+                        </div>
+                        <button
+                          onClick={() => handleUpdateEmailSettings({ requireMember: !emailSettings.requireMember })}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                            emailSettings.requireMember ? "bg-indigo-600" : "bg-slate-600"
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                              emailSettings.requireMember ? "translate-x-6" : "translate-x-1"
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Disable button */}
+                    {isOwner && (
+                      <div className="pt-4 border-t border-slate-700">
+                        <button
+                          onClick={handleDisableEmail}
+                          className="text-red-400 hover:text-red-300 text-sm font-medium transition-colors"
+                        >
+                          Disable Email-to-Task
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Setup Instructions */}
+              <div className="border border-slate-600 rounded-lg p-4">
+                <h3 className="text-lg font-medium text-white mb-3">Email Service Setup</h3>
+                <p className="text-slate-400 text-sm mb-4">
+                  To receive emails, configure your email service to forward incoming mail to this webhook:
+                </p>
+                <div className="bg-slate-800 rounded-lg p-3 font-mono text-sm text-slate-300 break-all">
+                  POST {typeof window !== "undefined" ? window.location.origin : "https://kanban.rhythm.engineering"}/api/webhooks/email
+                </div>
+                <div className="mt-4 space-y-2 text-slate-400 text-sm">
+                  <p><strong className="text-slate-300">Supported services:</strong></p>
+                  <ul className="list-disc list-inside space-y-1 ml-2">
+                    <li>SendGrid Inbound Parse</li>
+                    <li>Mailgun Routes</li>
+                    <li>Any service that can POST parsed emails as JSON</li>
+                  </ul>
+                </div>
+              </div>
             </div>
           )}
 

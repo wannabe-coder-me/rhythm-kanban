@@ -6,13 +6,13 @@ import { useEffect, useState, useCallback, useMemo, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import type { Board, Column, Task, User, Label } from "@/types";
-import { Calendar, CalendarListView } from "@/components/Calendar";
+import { Timeline, TimelineSkeleton } from "@/components/Timeline";
 import { TaskDetailPanel } from "@/components/TaskDetailPanel";
 import { FilterBar } from "@/components/FilterBar";
 import { useFilters } from "@/hooks/useFilters";
 import { NotificationBell } from "@/components/NotificationBell";
 
-function CalendarViewContent() {
+function TimelineViewContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const params = useParams();
@@ -24,10 +24,6 @@ function CalendarViewContent() {
   const [availableLabels, setAvailableLabels] = useState<Label[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [showQuickAdd, setShowQuickAdd] = useState(false);
-  const [quickAddDate, setQuickAddDate] = useState<Date | null>(null);
-  const [quickAddTitle, setQuickAddTitle] = useState("");
-  const [isMobile, setIsMobile] = useState(false);
 
   // Use the shared filter system
   const {
@@ -38,14 +34,6 @@ function CalendarViewContent() {
     hasActiveFilters,
     filterTasks,
   } = useFilters();
-
-  // Detect mobile viewport
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -133,6 +121,15 @@ function CalendarViewContent() {
     );
   }, [columns]);
 
+  // All board tasks for dependency picker
+  const allBoardTasks = useMemo(() => {
+    return columns.flatMap((col) =>
+      (col.tasks || [])
+        .filter((t) => !t.parentId)
+        .map((t) => ({ ...t, column: col }))
+    );
+  }, [columns]);
+
   // Filter tasks using the shared filter hook
   const filteredTasks = useMemo(() => {
     return filterTasks(allTasks);
@@ -142,50 +139,18 @@ function CalendarViewContent() {
     setSelectedTask(task);
   };
 
-  const handleDateClick = (date: Date) => {
-    setQuickAddDate(date);
-    setShowQuickAdd(true);
-    setQuickAddTitle("");
-  };
-
-  const handleTaskMove = async (taskId: string, newDueDate: Date) => {
+  const handleTaskMove = async (taskId: string, startDate: Date, dueDate: Date) => {
     try {
       const res = await fetch(`/api/tasks/${taskId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dueDate: newDueDate }),
+        body: JSON.stringify({ startDate, dueDate }),
       });
       if (res.ok) {
         fetchBoard();
       }
     } catch (error) {
-      console.error("Failed to move task:", error);
-    }
-  };
-
-  const handleQuickAdd = async () => {
-    if (!quickAddTitle.trim() || !quickAddDate || columns.length === 0) return;
-
-    // Use the first column as default
-    const defaultColumnId = columns[0].id;
-
-    try {
-      const res = await fetch(`/api/columns/${defaultColumnId}/tasks`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: quickAddTitle,
-          dueDate: quickAddDate,
-        }),
-      });
-      if (res.ok) {
-        setShowQuickAdd(false);
-        setQuickAddTitle("");
-        setQuickAddDate(null);
-        fetchBoard();
-      }
-    } catch (error) {
-      console.error("Failed to create task:", error);
+      console.error("Failed to update task dates:", error);
     }
   };
 
@@ -249,8 +214,15 @@ function CalendarViewContent() {
 
   if (status === "loading" || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
+      <div className="h-screen flex flex-col bg-slate-900">
+        <header className="border-b border-slate-700 bg-slate-800/50 shrink-0">
+          <div className="px-6 py-4">
+            <div className="h-6 w-48 bg-slate-700 rounded animate-pulse" />
+          </div>
+        </header>
+        <div className="flex-1 p-6">
+          <TimelineSkeleton />
+        </div>
       </div>
     );
   }
@@ -283,7 +255,7 @@ function CalendarViewContent() {
             </Link>
             <div>
               <h1 className="text-xl font-bold text-white">{board.name}</h1>
-              <p className="text-sm text-slate-400">Calendar View</p>
+              <p className="text-sm text-slate-400">Timeline View</p>
             </div>
           </div>
 
@@ -328,7 +300,10 @@ function CalendarViewContent() {
                 </svg>
                 Table
               </Link>
-              <div className="flex items-center gap-2 px-3 py-1.5 text-sm text-white bg-slate-600 rounded-md">
+              <Link
+                href={`/boards/${boardId}/calendar`}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm text-slate-400 hover:text-white rounded-md transition-colors"
+              >
                 <svg
                   className="w-4 h-4"
                   fill="none"
@@ -343,11 +318,8 @@ function CalendarViewContent() {
                   />
                 </svg>
                 Calendar
-              </div>
-              <Link
-                href={`/boards/${boardId}/timeline`}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm text-slate-400 hover:text-white rounded-md transition-colors"
-              >
+              </Link>
+              <div className="flex items-center gap-2 px-3 py-1.5 text-sm text-white bg-slate-600 rounded-md">
                 <svg
                   className="w-4 h-4"
                   fill="none"
@@ -362,7 +334,7 @@ function CalendarViewContent() {
                   />
                 </svg>
                 Timeline
-              </Link>
+              </div>
             </div>
 
             <NotificationBell />
@@ -422,70 +394,15 @@ function CalendarViewContent() {
         </div>
       )}
 
-      {/* Calendar */}
+      {/* Timeline */}
       <div className="flex-1 overflow-hidden p-6">
-        {isMobile ? (
-          <CalendarListView
-            tasks={filteredTasks}
-            onTaskClick={handleTaskClick}
-            onDateClick={handleDateClick}
-          />
-        ) : (
-          <Calendar
-            tasks={filteredTasks}
-            onTaskClick={handleTaskClick}
-            onDateClick={handleDateClick}
-            onTaskMove={handleTaskMove}
-          />
-        )}
+        <Timeline
+          tasks={filteredTasks}
+          columns={columns}
+          onTaskClick={handleTaskClick}
+          onTaskMove={handleTaskMove}
+        />
       </div>
-
-      {/* Quick Add Modal */}
-      {showQuickAdd && quickAddDate && (
-        <>
-          <div
-            className="fixed inset-0 bg-black/40 z-40"
-            onClick={() => setShowQuickAdd(false)}
-          />
-          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-800 rounded-lg p-6 z-50 w-full max-w-md shadow-2xl">
-            <h3 className="text-lg font-semibold text-white mb-4">
-              Add Task for{" "}
-              {quickAddDate.toLocaleDateString("en-US", {
-                weekday: "long",
-                month: "long",
-                day: "numeric",
-              })}
-            </h3>
-            <input
-              type="text"
-              value={quickAddTitle}
-              onChange={(e) => setQuickAddTitle(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleQuickAdd();
-                if (e.key === "Escape") setShowQuickAdd(false);
-              }}
-              placeholder="Task title..."
-              className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4"
-              autoFocus
-            />
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setShowQuickAdd(false)}
-                className="px-4 py-2 text-slate-400 hover:text-white transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleQuickAdd}
-                disabled={!quickAddTitle.trim()}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
-              >
-                Add Task
-              </button>
-            </div>
-          </div>
-        </>
-      )}
 
       {/* Task Detail Panel */}
       {selectedTask && (
@@ -495,6 +412,7 @@ function CalendarViewContent() {
           users={users}
           boardId={boardId}
           availableLabels={availableLabels}
+          allBoardTasks={allBoardTasks}
           onClose={() => setSelectedTask(null)}
           onUpdate={handleUpdateTask}
           onDelete={handleDeleteTask}
@@ -509,7 +427,7 @@ function CalendarViewContent() {
 }
 
 // Wrapper with Suspense
-export default function CalendarViewPage() {
+export default function TimelineViewPage() {
   return (
     <Suspense
       fallback={
@@ -518,7 +436,7 @@ export default function CalendarViewPage() {
         </div>
       }
     >
-      <CalendarViewContent />
+      <TimelineViewContent />
     </Suspense>
   );
 }

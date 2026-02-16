@@ -73,6 +73,11 @@ export async function GET(
           createdBy: { select: { id: true, name: true, email: true } },
         },
       },
+      customFieldValues: {
+        include: {
+          customField: true,
+        },
+      },
     },
   });
 
@@ -94,7 +99,7 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await req.json();
-  const { title, description, priority, dueDate, labelIds, assigneeId, columnId, position, completed, isRecurring, recurrenceRule } = body;
+  const { title, description, priority, dueDate, labelIds, assigneeId, columnId, position, completed, isRecurring, recurrenceRule, customFields } = body;
 
   const task = await prisma.task.findFirst({
     where: { id },
@@ -201,6 +206,9 @@ export async function PATCH(
         include: { assignee: true, labels: true },
         orderBy: { position: "asc" },
       },
+      customFieldValues: {
+        include: { customField: true },
+      },
     },
   });
 
@@ -214,6 +222,33 @@ export async function PATCH(
         details: activity.details as object,
       },
     });
+  }
+
+  // Handle custom field values
+  if (customFields && typeof customFields === "object") {
+    for (const [fieldId, value] of Object.entries(customFields)) {
+      // Verify field belongs to this board
+      const field = await prisma.customField.findFirst({
+        where: { id: fieldId, boardId: task.column.board.id },
+      });
+
+      if (field) {
+        // Upsert the value
+        await prisma.customFieldValue.upsert({
+          where: {
+            taskId_customFieldId: { taskId: id, customFieldId: fieldId },
+          },
+          update: {
+            value: value === null || value === undefined ? null : String(value),
+          },
+          create: {
+            taskId: id,
+            customFieldId: fieldId,
+            value: value === null || value === undefined ? null : String(value),
+          },
+        });
+      }
+    }
   }
 
   // Emit real-time event

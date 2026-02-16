@@ -91,3 +91,84 @@ body {
 .priority-urgent {
   --priority-color: #ef4444;
 }
+
+/* PWA Styles */
+/* Safe area insets for notched devices */
+html {
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+body {
+  /* Prevent pull-to-refresh on PWA */
+  overscroll-behavior-y: contain;
+}
+
+/* Touch target minimum size (44px) */
+button,
+a,
+[role="button"],
+input[type="checkbox"],
+input[type="radio"],
+select {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Exception for inline links */
+p a,
+span a,
+li a {
+  min-height: auto;
+  min-width: auto;
+}
+
+/* Prevent text selection on interactive elements in PWA */
+@media (display-mode: standalone) {
+  button,
+  [role="button"] {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  
+  /* Haptic feedback for touch */
+  button:active,
+  [role="button"]:active {
+    opacity: 0.8;
+  }
+}
+
+/* Standalone mode adjustments */
+@media (display-mode: standalone) {
+  /* Add padding for status bar */
+  .pwa-header {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  /* Bottom navigation safe area */
+  .pwa-bottom-nav {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Pull to refresh visual feedback */
+.pull-to-refresh {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Smooth scrolling for containers */
+.smooth-scroll {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Focus visible for keyboard navigation */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Remove focus outline for touch/mouse */
+:focus:not(:focus-visible) {
+  outline: none;
+}

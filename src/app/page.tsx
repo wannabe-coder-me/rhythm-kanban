@@ -7,6 +7,8 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Board } from "@/types";
 import { NotificationBell } from "@/components/NotificationBell";
+import { BoardTemplateSelector } from "@/components/BoardTemplateSelector";
+import { BoardTemplate, boardTemplates } from "@/lib/board-templates";
 
 interface TaskSummary {
   total: number;
@@ -20,6 +22,8 @@ export default function HomePage() {
   const [boards, setBoards] = useState<Board[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createStep, setCreateStep] = useState<"template" | "details">("template");
+  const [selectedTemplate, setSelectedTemplate] = useState<BoardTemplate | null>(null);
   const [newBoardName, setNewBoardName] = useState("");
   const [newBoardDesc, setNewBoardDesc] = useState("");
   const [creating, setCreating] = useState(false);
@@ -74,14 +78,13 @@ export default function HomePage() {
         body: JSON.stringify({
           name: newBoardName,
           description: newBoardDesc || null,
+          templateId: selectedTemplate?.id,
         }),
       });
       if (res.ok) {
         const board = await res.json();
         setBoards([...boards, board]);
-        setShowCreateModal(false);
-        setNewBoardName("");
-        setNewBoardDesc("");
+        closeCreateModal();
         router.push(`/boards/${board.id}`);
       } else {
         const error = await res.json();
@@ -93,6 +96,32 @@ export default function HomePage() {
       alert("Failed to create board. Check console for details.");
     } finally {
       setCreating(false);
+    }
+  };
+
+  const openCreateModal = () => {
+    setCreateStep("template");
+    setSelectedTemplate(boardTemplates[0]); // Default to Blank
+    setNewBoardName("");
+    setNewBoardDesc("");
+    setShowCreateModal(true);
+  };
+
+  const closeCreateModal = () => {
+    setShowCreateModal(false);
+    setCreateStep("template");
+    setSelectedTemplate(null);
+    setNewBoardName("");
+    setNewBoardDesc("");
+  };
+
+  const handleTemplateSelect = (template: BoardTemplate) => {
+    setSelectedTemplate(template);
+  };
+
+  const proceedToDetails = () => {
+    if (selectedTemplate) {
+      setCreateStep("details");
     }
   };
 
@@ -176,7 +205,7 @@ export default function HomePage() {
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-2xl font-semibold text-white">Your Boards</h2>
           <button
-            onClick={() => setShowCreateModal(true)}
+            onClick={openCreateModal}
             className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -196,7 +225,7 @@ export default function HomePage() {
             <h3 className="text-lg font-medium text-slate-300 mb-2">No boards yet</h3>
             <p className="text-slate-500 mb-4">Create your first board to get started</p>
             <button
-              onClick={() => setShowCreateModal(true)}
+              onClick={openCreateModal}
               className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-medium transition-colors"
             >
               Create Board
@@ -227,51 +256,131 @@ export default function HomePage() {
 
       {/* Create Board Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-slate-800 rounded-xl p-6 w-full max-w-md shadow-2xl fade-in">
-            <h3 className="text-xl font-semibold text-white mb-4">Create New Board</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">
-                  Board Name
-                </label>
-                <input
-                  type="text"
-                  value={newBoardName}
-                  onChange={(e) => setNewBoardName(e.target.value)}
-                  placeholder="My Project"
-                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  autoFocus
-                />
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-xl p-6 w-full max-w-2xl shadow-2xl fade-in max-h-[90vh] overflow-y-auto">
+            {/* Step Indicator */}
+            <div className="flex items-center gap-2 mb-6">
+              <div className={`flex items-center gap-2 ${createStep === "template" ? "text-indigo-400" : "text-slate-400"}`}>
+                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-medium ${createStep === "template" ? "bg-indigo-500 text-white" : "bg-slate-600 text-slate-300"}`}>1</span>
+                <span className="text-sm font-medium">Choose Template</span>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">
-                  Description (optional)
-                </label>
-                <textarea
-                  value={newBoardDesc}
-                  onChange={(e) => setNewBoardDesc(e.target.value)}
-                  placeholder="What is this board for?"
-                  rows={3}
-                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
-                />
+              <div className="flex-1 h-px bg-slate-600 mx-2" />
+              <div className={`flex items-center gap-2 ${createStep === "details" ? "text-indigo-400" : "text-slate-400"}`}>
+                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-medium ${createStep === "details" ? "bg-indigo-500 text-white" : "bg-slate-600 text-slate-300"}`}>2</span>
+                <span className="text-sm font-medium">Board Details</span>
               </div>
             </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <button
-                onClick={() => setShowCreateModal(false)}
-                className="px-4 py-2 text-slate-400 hover:text-white transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={createBoard}
-                disabled={!newBoardName.trim() || creating}
-                className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-600/50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors"
-              >
-                {creating ? "Creating..." : "Create Board"}
-              </button>
-            </div>
+
+            {createStep === "template" ? (
+              <>
+                <h3 className="text-xl font-semibold text-white mb-2">Choose a Template</h3>
+                <p className="text-slate-400 text-sm mb-4">Start with a pre-configured board or create a blank one</p>
+                
+                <BoardTemplateSelector
+                  selectedId={selectedTemplate?.id ?? null}
+                  onSelect={handleTemplateSelect}
+                />
+
+                <div className="flex justify-end gap-3 mt-6">
+                  <button
+                    onClick={closeCreateModal}
+                    className="px-4 py-2 text-slate-400 hover:text-white transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={proceedToDetails}
+                    disabled={!selectedTemplate}
+                    className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-600/50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+                  >
+                    Continue
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-3 mb-4">
+                  <button
+                    onClick={() => setCreateStep("template")}
+                    className="text-slate-400 hover:text-white transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <h3 className="text-xl font-semibold text-white">Board Details</h3>
+                </div>
+
+                {/* Selected Template Preview */}
+                {selectedTemplate && (
+                  <div className="bg-slate-700/50 rounded-lg p-3 mb-4 flex items-center gap-3">
+                    <div className="flex gap-0.5">
+                      {selectedTemplate.columns.slice(0, 5).map((col, i) => (
+                        <div
+                          key={i}
+                          className="w-3 h-8 rounded-sm"
+                          style={{ backgroundColor: col.color }}
+                        />
+                      ))}
+                    </div>
+                    <div>
+                      <span className="text-white font-medium text-sm">{selectedTemplate.name}</span>
+                      <span className="text-slate-400 text-sm ml-2">
+                        ({selectedTemplate.columns.length} columns
+                        {selectedTemplate.labels.length > 0 && `, ${selectedTemplate.labels.length} labels`})
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">
+                      Board Name
+                    </label>
+                    <input
+                      type="text"
+                      value={newBoardName}
+                      onChange={(e) => setNewBoardName(e.target.value)}
+                      placeholder="My Project"
+                      className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      autoFocus
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">
+                      Description (optional)
+                    </label>
+                    <textarea
+                      value={newBoardDesc}
+                      onChange={(e) => setNewBoardDesc(e.target.value)}
+                      placeholder="What is this board for?"
+                      rows={3}
+                      className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 mt-6">
+                  <button
+                    onClick={closeCreateModal}
+                    className="px-4 py-2 text-slate-400 hover:text-white transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={createBoard}
+                    disabled={!newBoardName.trim() || creating}
+                    className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-600/50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                  >
+                    {creating ? "Creating..." : "Create Board"}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
