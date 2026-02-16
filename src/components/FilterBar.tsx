@@ -131,6 +131,22 @@ export function FilterBar({
         />
       )}
 
+      {/* Dependency Filter */}
+      <select
+        value={filters.dependencyFilter}
+        onChange={(e) => onFilterChange({ dependencyFilter: e.target.value as DependencyFilter })}
+        className={clsx(
+          "bg-slate-700 border rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500",
+          filters.dependencyFilter !== "all" ? "border-indigo-500" : "border-slate-600"
+        )}
+      >
+        {dependencyOptions.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+
       {/* Clear Filters */}
       {activeFilterCount > 0 && (
         <button
