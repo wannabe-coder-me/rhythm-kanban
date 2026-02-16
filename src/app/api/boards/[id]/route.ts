@@ -35,6 +35,9 @@ export async function GET(
                   assignee: true,
                 },
               },
+              _count: {
+                select: { attachments: true },
+              },
             },
           },
         },

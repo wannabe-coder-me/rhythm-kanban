@@ -110,6 +110,16 @@ Comment / Activity
 - Change user roles
 - Delete users
 
+### Subtasks (Asana-style)
+- Expand/collapse chevron on parent tasks
+- Nested subtasks with progress bar (X/Y completed)
+- Checkable directly from board view
+- Subtasks follow parent (not separately draggable)
+
+### Column Reordering
+- Drag column headers to rearrange
+- Position persists via API
+
 ## Environment Variables
 
 ```bash
@@ -155,3 +165,4 @@ npm run dev
 | GET/POST | `/api/tasks/[id]/comments` | Task comments |
 | GET/POST | `/api/admin/users` | Admin: list/add users |
 | PATCH/DELETE | `/api/admin/users/[id]` | Admin: update/delete user |
+| PATCH | `/api/boards/[id]/columns/reorder` | Reorder columns |
