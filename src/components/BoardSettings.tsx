@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
-import type { Board, BoardMember, User, BoardVisibility } from "@/types";
+import type { Board, BoardMember, User, BoardVisibility, BoardInvite } from "@/types";
 
 interface BoardSettingsProps {
   board: Board;
@@ -43,6 +43,7 @@ export function BoardSettings({
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"admin" | "member" | "viewer">("member");
+  const [pendingInvites, setPendingInvites] = useState<BoardInvite[]>([]);
 
   // Danger zone state
   const [newOwnerId, setNewOwnerId] = useState("");
@@ -70,11 +71,54 @@ export function BoardSettings({
     }
   }, [board.id]);
 
+  // Fetch pending invites
+  const fetchPendingInvites = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/boards/${board.id}/invites`);
+      if (res.ok) {
+        const data = await res.json();
+        setPendingInvites(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch invites:", err);
+    }
+  }, [board.id]);
+
+  // Revoke invite
+  const handleRevokeInvite = async (inviteId: string) => {
+    try {
+      const res = await fetch(
+        `/api/boards/${board.id}/invites?inviteId=${inviteId}`,
+        { method: "DELETE" }
+      );
+      if (res.ok) {
+        setPendingInvites(pendingInvites.filter((i) => i.id !== inviteId));
+        setSuccess("Invite revoked!");
+      }
+    } catch (err) {
+      setError("Failed to revoke invite");
+    }
+  };
+
+  // Format expiry date
+  const formatExpiry = (date: Date) => {
+    const expiry = new Date(date);
+    const now = new Date();
+    const diff = expiry.getTime() - now.getTime();
+    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+    if (days <= 0) return "Expired";
+    if (days === 1) return "1 day";
+    return `${days} days`;
+  };
+
   useEffect(() => {
     if (isOpen && activeTab === "members") {
       fetchMembers();
+      if (canEdit) {
+        fetchPendingInvites();
+      }
     }
-  }, [isOpen, activeTab, fetchMembers]);
+  }, [isOpen, activeTab, fetchMembers, fetchPendingInvites, canEdit]);
 
   // Reset state when board changes
   useEffect(() => {
