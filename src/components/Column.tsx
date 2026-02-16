@@ -95,11 +95,13 @@ export function Column({
     transition,
   };
 
-  const handleAddTask = () => {
+  const handleAddTask = (keepOpen = false) => {
     if (newTaskTitle.trim()) {
       onAddTask(column.id, newTaskTitle);
       setNewTaskTitle("");
-      setIsAdding(false);
+      if (!keepOpen) {
+        setIsAdding(false);
+      }
     }
   };
 
@@ -193,7 +195,10 @@ export function Column({
               value={newTaskTitle}
               onChange={(e) => setNewTaskTitle(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") handleAddTask();
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleAddTask(true); // Keep input open for rapid entry
+                }
                 if (e.key === "Escape") {
                   setIsAdding(false);
                   setNewTaskTitle("");
