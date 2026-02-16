@@ -1,6 +1,8 @@
 "use client";
 
 import { useDroppable } from "@dnd-kit/core";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   SortableContext,
   verticalListSortingStrategy,
@@ -16,6 +18,7 @@ interface ColumnProps {
   onTaskClick: (task: Task) => void;
   onAddTask: (columnId: string, title: string) => void;
   onDeleteColumn?: () => void;
+  onToggleSubtask?: (subtaskId: string, completed: boolean) => void;
 }
 
 export function Column({
@@ -24,14 +27,31 @@ export function Column({
   onTaskClick,
   onAddTask,
   onDeleteColumn,
+  onToggleSubtask,
 }: ColumnProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [showMenu, setShowMenu] = useState(false);
 
-  const { setNodeRef, isOver } = useDroppable({
+  // Make column sortable for reordering
+  const {
+    attributes: sortableAttributes,
+    listeners: sortableListeners,
+    setNodeRef: setSortableRef,
+    transform,
+    transition,
+    isDragging: isColumnDragging,
+  } = useSortable({ id: column.id });
+
+  // Make column a drop target for tasks
+  const { setNodeRef: setDroppableRef, isOver } = useDroppable({
     id: column.id,
   });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
 
   const handleAddTask = () => {
     if (newTaskTitle.trim()) {
@@ -43,13 +63,20 @@ export function Column({
 
   return (
     <div
+      ref={setSortableRef}
+      style={style}
       className={clsx(
         "flex-shrink-0 w-72 bg-slate-800/50 rounded-lg flex flex-col max-h-full",
-        isOver && "ring-2 ring-indigo-500"
+        isOver && "ring-2 ring-indigo-500",
+        isColumnDragging && "opacity-50"
       )}
     >
-      {/* Column Header */}
-      <div className="p-3 flex items-center justify-between">
+      {/* Column Header - draggable for reordering */}
+      <div
+        {...sortableAttributes}
+        {...sortableListeners}
+        className="p-3 flex items-center justify-between cursor-grab active:cursor-grabbing"
+      >
         <div className="flex items-center gap-2">
           <div
             className="w-3 h-3 rounded-full"
@@ -62,7 +89,10 @@ export function Column({
         </div>
         <div className="relative">
           <button
-            onClick={() => setShowMenu(!showMenu)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowMenu(!showMenu);
+            }}
             className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors"
           >
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -91,9 +121,9 @@ export function Column({
         </div>
       </div>
 
-      {/* Tasks */}
+      {/* Tasks - droppable area */}
       <div
-        ref={setNodeRef}
+        ref={setDroppableRef}
         className="flex-1 overflow-y-auto p-2 space-y-2 min-h-[100px]"
       >
         <SortableContext
@@ -105,6 +135,7 @@ export function Column({
               key={task.id}
               task={task}
               onClick={() => onTaskClick(task)}
+              onToggleSubtask={onToggleSubtask}
             />
           ))}
         </SortableContext>

@@ -23,6 +23,7 @@ model User {
   tasksCreated  Task[]    @relation("TaskCreator")
   comments      Comment[]
   activities    Activity[]
+  attachments   Attachment[]
 }
 
 model Account {
@@ -104,6 +105,7 @@ model Task {
   subtasks    Task[]    @relation("Subtasks")
   comments    Comment[]
   activities  Activity[]
+  attachments Attachment[]
 }
 
 model Comment {
@@ -125,4 +127,18 @@ model Activity {
   createdAt DateTime @default(now())
   task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id])
+}
+
+model Attachment {
+  id           String   @id @default(uuid())
+  taskId       String
+  filename     String
+  url          String
+  mimeType     String
+  size         Int
+  uploadedById String
+  createdAt    DateTime @default(now())
+  
+  task         Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
 }

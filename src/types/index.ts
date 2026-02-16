@@ -55,6 +55,8 @@ export interface Task {
   column?: Column;
   subtasks?: Task[];
   parent?: Task;
+  attachments?: Attachment[];
+  _count?: { attachments?: number };
 }
 
 export interface Comment {
@@ -74,4 +76,16 @@ export interface Activity {
   details: Record<string, unknown> | null;
   createdAt: Date;
   user?: User;
+}
+
+export interface Attachment {
+  id: string;
+  taskId: string;
+  filename: string;
+  url: string;
+  mimeType: string;
+  size: number;
+  uploadedById: string;
+  createdAt: Date;
+  uploadedBy?: User;
 }

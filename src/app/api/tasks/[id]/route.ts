@@ -38,6 +38,10 @@ export async function GET(
         include: { assignee: true },
         orderBy: { position: "asc" },
       },
+      attachments: {
+        include: { uploadedBy: true },
+        orderBy: { createdAt: "desc" },
+      },
     },
   });
 

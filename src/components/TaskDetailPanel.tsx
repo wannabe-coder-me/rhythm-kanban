@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
-import type { Task, User, Comment, Activity, Column, Priority } from "@/types";
+import type { Task, User, Comment, Activity, Column, Priority, Attachment } from "@/types";
 import { format } from "date-fns";
 import clsx from "clsx";
 
@@ -48,6 +48,9 @@ export function TaskDetailPanel({
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
   const [editingSubtaskId, setEditingSubtaskId] = useState<string | null>(null);
   const [editingSubtaskTitle, setEditingSubtaskTitle] = useState("");
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     if (task) {
@@ -59,6 +62,7 @@ export function TaskDetailPanel({
       setColumnId(task.columnId);
       setLabels(task.labels || []);
       setSubtasks([]);
+      setAttachments([]);
       fetchTaskDetails();
     }
   }, [task]);
@@ -72,6 +76,7 @@ export function TaskDetailPanel({
         setComments(data.comments || []);
         setActivities(data.activities || []);
         setSubtasks(data.subtasks || []);
+        setAttachments(data.attachments || []);
       }
     } catch (error) {
       console.error("Failed to fetch task details:", error);
@@ -146,6 +151,98 @@ export function TaskDetailPanel({
   };
 
   const completedSubtasks = subtasks.filter((s) => s.completed).length;
+
+  // Attachment functions
+  const uploadFile = async (file: File) => {
+    if (!task) return;
+    
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      alert("File too large. Maximum size is 10MB.");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      
+      const res = await fetch(`/api/tasks/${task.id}/attachments`, {
+        method: "POST",
+        body: formData,
+      });
+      
+      if (res.ok) {
+        const attachment = await res.json();
+        setAttachments([attachment, ...attachments]);
+      } else {
+        const error = await res.json();
+        alert(error.error || "Failed to upload file");
+      }
+    } catch (error) {
+      console.error("Failed to upload file:", error);
+      alert("Failed to upload file");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const deleteAttachment = async (attachmentId: string) => {
+    if (!task) return;
+    if (!confirm("Delete this attachment?")) return;
+    
+    try {
+      const res = await fetch(
+        `/api/tasks/${task.id}/attachments?attachmentId=${attachmentId}`,
+        { method: "DELETE" }
+      );
+      
+      if (res.ok) {
+        setAttachments(attachments.filter((a) => a.id !== attachmentId));
+      }
+    } catch (error) {
+      console.error("Failed to delete attachment:", error);
+    }
+  };
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    const files = Array.from(e.dataTransfer.files);
+    files.forEach(uploadFile);
+  }, [task, attachments]);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    files.forEach(uploadFile);
+    e.target.value = ""; // Reset input
+  };
+
+  const getFileIcon = (mimeType: string) => {
+    if (mimeType.startsWith("image/")) return "🖼️";
+    if (mimeType === "application/pdf") return "📄";
+    if (mimeType.includes("spreadsheet") || mimeType.includes("excel") || mimeType === "text/csv") return "📊";
+    if (mimeType.includes("presentation") || mimeType.includes("powerpoint")) return "📽️";
+    if (mimeType.includes("document") || mimeType.includes("word") || mimeType === "text/plain" || mimeType === "text/markdown") return "📝";
+    return "📎";
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
 
   const handleSave = () => {
     if (!task) return;
@@ -376,6 +473,112 @@ export function TaskDetailPanel({
               placeholder="Add a description..."
               className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
             />
+          </div>
+
+          {/* Attachments */}
+          <div>
+            <label className="block text-sm font-medium text-slate-400 mb-2">
+              Attachments {attachments.length > 0 && `(${attachments.length})`}
+            </label>
+            
+            {/* Drop Zone */}
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={clsx(
+                "border-2 border-dashed rounded-lg p-4 text-center transition-colors mb-3",
+                isDragging
+                  ? "border-indigo-500 bg-indigo-500/10"
+                  : "border-slate-600 hover:border-slate-500"
+              )}
+            >
+              {isUploading ? (
+                <div className="flex items-center justify-center gap-2 text-slate-400">
+                  <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  <span>Uploading...</span>
+                </div>
+              ) : (
+                <div className="text-slate-400">
+                  <svg className="w-8 h-8 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                  <p className="text-sm">Drag & drop files here</p>
+                  <p className="text-xs text-slate-500 mt-1">or</p>
+                  <label className="inline-block mt-2 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded-lg cursor-pointer transition-colors">
+                    Browse files
+                    <input
+                      type="file"
+                      className="hidden"
+                      multiple
+                      onChange={handleFileSelect}
+                      accept="image/*,.pdf,.doc,.docx,.txt,.md,.xls,.xlsx,.csv,.ppt,.pptx"
+                    />
+                  </label>
+                  <p className="text-xs text-slate-500 mt-2">Max 10MB per file</p>
+                </div>
+              )}
+            </div>
+
+            {/* Attachment List */}
+            {attachments.length > 0 && (
+              <div className="space-y-2">
+                {attachments.map((attachment) => (
+                  <div
+                    key={attachment.id}
+                    className="flex items-center gap-3 p-2 bg-slate-700/50 rounded-lg group hover:bg-slate-700"
+                  >
+                    {/* Preview for images */}
+                    {attachment.mimeType.startsWith("image/") ? (
+                      <a
+                        href={attachment.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-10 h-10 rounded overflow-hidden flex-shrink-0"
+                      >
+                        <img
+                          src={attachment.url}
+                          alt={attachment.filename}
+                          className="w-full h-full object-cover"
+                        />
+                      </a>
+                    ) : (
+                      <span className="text-2xl flex-shrink-0">
+                        {getFileIcon(attachment.mimeType)}
+                      </span>
+                    )}
+
+                    <div className="flex-1 min-w-0">
+                      <a
+                        href={attachment.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-white hover:text-indigo-400 truncate block"
+                        title={attachment.filename}
+                      >
+                        {attachment.filename}
+                      </a>
+                      <p className="text-xs text-slate-500">
+                        {formatFileSize(attachment.size)} • {format(new Date(attachment.createdAt), "MMM d")}
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => deleteAttachment(attachment.id)}
+                      className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-500 hover:text-red-400 transition-all"
+                      title="Delete attachment"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Subtasks */}

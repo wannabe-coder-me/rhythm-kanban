@@ -30,7 +30,10 @@ export async function GET(
               assignee: true,
               createdBy: true,
               subtasks: {
-                select: { id: true, completed: true },
+                orderBy: { position: "asc" },
+                include: {
+                  assignee: true,
+                },
               },
             },
           },
