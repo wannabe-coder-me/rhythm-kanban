@@ -17,6 +17,7 @@ export async function GET(
   const tasks = await prisma.task.findMany({
     where: {
       columnId: id,
+      parentId: null, // Only return parent tasks, not subtasks
       column: {
         board: { members: { some: { userId: session.user.id } } },
       },
@@ -25,6 +26,9 @@ export async function GET(
     include: {
       assignee: true,
       createdBy: true,
+      subtasks: {
+        select: { id: true, completed: true },
+      },
     },
   });
 
@@ -41,7 +45,7 @@ export async function POST(
   }
 
   const { id } = await params;
-  const { title, description, priority, dueDate, labels, assigneeId } = await req.json();
+  const { title, description, priority, dueDate, labels, assigneeId, parentId } = await req.json();
 
   if (!title?.trim()) {
     return NextResponse.json({ error: "Title is required" }, { status: 400 });
@@ -77,10 +81,14 @@ export async function POST(
       assigneeId: assigneeId || null,
       createdById: session.user.id,
       position: (maxPosition._max.position ?? -1) + 1,
+      parentId: parentId || null,
     },
     include: {
       assignee: true,
       createdBy: true,
+      subtasks: {
+        select: { id: true, completed: true },
+      },
     },
   });
 

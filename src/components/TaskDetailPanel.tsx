@@ -44,6 +44,10 @@ export function TaskDetailPanel({
   const [activities, setActivities] = useState<Activity[]>([]);
   const [newComment, setNewComment] = useState("");
   const [activeTab, setActiveTab] = useState<"comments" | "activity">("comments");
+  const [subtasks, setSubtasks] = useState<Task[]>([]);
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
+  const [editingSubtaskId, setEditingSubtaskId] = useState<string | null>(null);
+  const [editingSubtaskTitle, setEditingSubtaskTitle] = useState("");
 
   useEffect(() => {
     if (task) {
@@ -54,6 +58,7 @@ export function TaskDetailPanel({
       setAssigneeId(task.assigneeId || "");
       setColumnId(task.columnId);
       setLabels(task.labels || []);
+      setSubtasks([]);
       fetchTaskDetails();
     }
   }, [task]);
@@ -66,11 +71,81 @@ export function TaskDetailPanel({
         const data = await res.json();
         setComments(data.comments || []);
         setActivities(data.activities || []);
+        setSubtasks(data.subtasks || []);
       }
     } catch (error) {
       console.error("Failed to fetch task details:", error);
     }
   };
+
+  const addSubtask = async () => {
+    if (!task || !newSubtaskTitle.trim()) return;
+    try {
+      const res = await fetch(`/api/tasks/${task.id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: newSubtaskTitle }),
+      });
+      if (res.ok) {
+        const subtask = await res.json();
+        setSubtasks([...subtasks, subtask]);
+        setNewSubtaskTitle("");
+      }
+    } catch (error) {
+      console.error("Failed to add subtask:", error);
+    }
+  };
+
+  const toggleSubtaskComplete = async (subtask: Task) => {
+    try {
+      const res = await fetch(`/api/tasks/${subtask.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ completed: !subtask.completed }),
+      });
+      if (res.ok) {
+        setSubtasks(subtasks.map((s) => 
+          s.id === subtask.id ? { ...s, completed: !s.completed } : s
+        ));
+      }
+    } catch (error) {
+      console.error("Failed to toggle subtask:", error);
+    }
+  };
+
+  const updateSubtaskTitle = async (subtaskId: string, newTitle: string) => {
+    if (!newTitle.trim()) return;
+    try {
+      const res = await fetch(`/api/tasks/${subtaskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: newTitle }),
+      });
+      if (res.ok) {
+        setSubtasks(subtasks.map((s) => 
+          s.id === subtaskId ? { ...s, title: newTitle } : s
+        ));
+        setEditingSubtaskId(null);
+      }
+    } catch (error) {
+      console.error("Failed to update subtask:", error);
+    }
+  };
+
+  const deleteSubtask = async (subtaskId: string) => {
+    try {
+      const res = await fetch(`/api/tasks/${subtaskId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setSubtasks(subtasks.filter((s) => s.id !== subtaskId));
+      }
+    } catch (error) {
+      console.error("Failed to delete subtask:", error);
+    }
+  };
+
+  const completedSubtasks = subtasks.filter((s) => s.completed).length;
 
   const handleSave = () => {
     if (!task) return;
@@ -301,6 +376,140 @@ export function TaskDetailPanel({
               placeholder="Add a description..."
               className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
             />
+          </div>
+
+          {/* Subtasks */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-slate-400">
+                Subtasks
+                {subtasks.length > 0 && (
+                  <span className="ml-2 text-xs">
+                    ({completedSubtasks}/{subtasks.length} completed)
+                  </span>
+                )}
+              </label>
+              {subtasks.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <div className="w-24 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-green-500 transition-all duration-300"
+                      style={{ width: `${(completedSubtasks / subtasks.length) * 100}%` }}
+                    />
+                  </div>
+                  <span className="text-xs text-slate-500">
+                    {Math.round((completedSubtasks / subtasks.length) * 100)}%
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Subtask List */}
+            <div className="space-y-2 mb-3">
+              {subtasks.map((subtask) => (
+                <div
+                  key={subtask.id}
+                  className={clsx(
+                    "flex items-center gap-2 p-2 bg-slate-700/50 rounded-lg group",
+                    subtask.completed && "opacity-60"
+                  )}
+                >
+                  <button
+                    onClick={() => toggleSubtaskComplete(subtask)}
+                    className={clsx(
+                      "w-5 h-5 rounded border flex items-center justify-center flex-shrink-0 transition-colors",
+                      subtask.completed
+                        ? "bg-green-500 border-green-500 text-white"
+                        : "border-slate-500 hover:border-slate-400"
+                    )}
+                  >
+                    {subtask.completed && (
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </button>
+
+                  {editingSubtaskId === subtask.id ? (
+                    <input
+                      type="text"
+                      value={editingSubtaskTitle}
+                      onChange={(e) => setEditingSubtaskTitle(e.target.value)}
+                      onBlur={() => updateSubtaskTitle(subtask.id, editingSubtaskTitle)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") updateSubtaskTitle(subtask.id, editingSubtaskTitle);
+                        if (e.key === "Escape") setEditingSubtaskId(null);
+                      }}
+                      autoFocus
+                      className="flex-1 bg-slate-600 border border-indigo-500 rounded px-2 py-0.5 text-sm text-white focus:outline-none"
+                    />
+                  ) : (
+                    <span
+                      onClick={() => {
+                        setEditingSubtaskId(subtask.id);
+                        setEditingSubtaskTitle(subtask.title);
+                      }}
+                      className={clsx(
+                        "flex-1 text-sm cursor-pointer hover:text-indigo-400",
+                        subtask.completed ? "text-slate-400 line-through" : "text-white"
+                      )}
+                    >
+                      {subtask.title}
+                    </span>
+                  )}
+
+                  {subtask.assignee && (
+                    <div
+                      className="flex-shrink-0"
+                      title={subtask.assignee.name || subtask.assignee.email}
+                    >
+                      {subtask.assignee.image ? (
+                        <Image
+                          src={subtask.assignee.image}
+                          alt={subtask.assignee.name || ""}
+                          width={20}
+                          height={20}
+                          className="rounded-full"
+                        />
+                      ) : (
+                        <div className="w-5 h-5 bg-slate-600 rounded-full flex items-center justify-center text-[10px] text-white">
+                          {(subtask.assignee.name || subtask.assignee.email)?.[0]?.toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => deleteSubtask(subtask.id)}
+                    className="opacity-0 group-hover:opacity-100 p-1 text-slate-500 hover:text-red-400 transition-all"
+                    title="Delete subtask"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Add Subtask Input */}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newSubtaskTitle}
+                onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && addSubtask()}
+                placeholder="Add a subtask..."
+                className="flex-1 bg-slate-700 border border-slate-600 rounded-lg px-3 py-1.5 text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+              <button
+                onClick={addSubtask}
+                disabled={!newSubtaskTitle.trim()}
+                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm rounded-lg transition-colors"
+              >
+                Add
+              </button>
+            </div>
           </div>
 
           {/* Tabs */}

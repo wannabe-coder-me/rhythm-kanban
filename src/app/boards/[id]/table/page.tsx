@@ -433,6 +433,9 @@ export default function TableViewPage() {
                 </div>
               </th>
               <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+                Subtasks
+              </th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">
                 Labels
               </th>
             </tr>
@@ -545,6 +548,22 @@ export default function TableViewPage() {
                       Urgent
                     </option>
                   </select>
+                </td>
+                <td className="px-4 py-3">
+                  {task.subtasks && task.subtasks.length > 0 ? (
+                    <div className="flex items-center gap-2">
+                      <span className={clsx(
+                        "text-sm",
+                        task.subtasks.filter((s: { completed: boolean }) => s.completed).length === task.subtasks.length 
+                          ? "text-green-400" 
+                          : "text-slate-400"
+                      )}>
+                        ☑ {task.subtasks.filter((s: { completed: boolean }) => s.completed).length}/{task.subtasks.length}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-slate-600 text-sm">—</span>
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-1">

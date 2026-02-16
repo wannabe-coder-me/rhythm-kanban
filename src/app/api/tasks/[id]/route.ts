@@ -34,6 +34,10 @@ export async function GET(
         take: 20,
       },
       column: true,
+      subtasks: {
+        include: { assignee: true },
+        orderBy: { position: "asc" },
+      },
     },
   });
 
@@ -55,7 +59,7 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await req.json();
-  const { title, description, priority, dueDate, labels, assigneeId, columnId, position } = body;
+  const { title, description, priority, dueDate, labels, assigneeId, columnId, position, completed } = body;
 
   const task = await prisma.task.findFirst({
     where: { id },
@@ -129,11 +133,16 @@ export async function PATCH(
       ...(dueDate !== undefined && { dueDate: dueDate ? new Date(dueDate) : null }),
       ...(labels && { labels }),
       ...(assigneeId !== undefined && { assigneeId: assigneeId || null }),
+      ...(completed !== undefined && { completed }),
     },
     include: {
       assignee: true,
       createdBy: true,
       column: true,
+      subtasks: {
+        include: { assignee: true },
+        orderBy: { position: "asc" },
+      },
     },
   });
 
@@ -182,4 +191,69 @@ export async function DELETE(
   await prisma.task.delete({ where: { id } });
 
   return NextResponse.json({ success: true });
+}
+
+// POST /api/tasks/[id] - Create a subtask for this task
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id: parentId } = await params;
+  const { title, assigneeId } = await req.json();
+
+  if (!title?.trim()) {
+    return NextResponse.json({ error: "Title is required" }, { status: 400 });
+  }
+
+  // Get parent task and verify access
+  const parentTask = await prisma.task.findFirst({
+    where: { id: parentId },
+    include: {
+      column: { include: { board: { include: { members: true } } } },
+      subtasks: true,
+    },
+  });
+
+  if (!parentTask) {
+    return NextResponse.json({ error: "Parent task not found" }, { status: 404 });
+  }
+
+  const isMember = parentTask.column.board.members.some((m) => m.userId === session.user.id);
+  if (!isMember) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  // Create subtask inheriting parent's column
+  const subtask = await prisma.task.create({
+    data: {
+      columnId: parentTask.columnId,
+      parentId,
+      title: title.trim(),
+      priority: "medium",
+      assigneeId: assigneeId || null,
+      createdById: session.user.id,
+      position: parentTask.subtasks.length,
+      completed: false,
+    },
+    include: {
+      assignee: true,
+    },
+  });
+
+  // Create activity
+  await prisma.activity.create({
+    data: {
+      taskId: parentId,
+      userId: session.user.id,
+      action: "added subtask",
+      details: { subtaskTitle: subtask.title },
+    },
+  });
+
+  return NextResponse.json(subtask);
 }

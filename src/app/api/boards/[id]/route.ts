@@ -24,10 +24,14 @@ export async function GET(
         orderBy: { position: "asc" },
         include: {
           tasks: {
+            where: { parentId: null }, // Only parent tasks, not subtasks
             orderBy: { position: "asc" },
             include: {
               assignee: true,
               createdBy: true,
+              subtasks: {
+                select: { id: true, completed: true },
+              },
             },
           },
         },

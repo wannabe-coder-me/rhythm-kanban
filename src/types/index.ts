@@ -43,14 +43,18 @@ export interface Task {
   priority: Priority;
   dueDate: Date | null;
   labels: string[];
+  completed: boolean;
   assigneeId: string | null;
   createdById: string;
+  parentId: string | null;
   createdAt: Date;
   updatedAt: Date;
   assignee?: User | null;
   createdBy?: User;
   comments?: Comment[];
   column?: Column;
+  subtasks?: Task[];
+  parent?: Task;
 }
 
 export interface Comment {
