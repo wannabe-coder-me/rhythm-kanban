@@ -91,7 +91,7 @@ export async function PATCH(
   }
 
   const { id } = await params;
-  const { name, description, visibility } = await req.json();
+  const { name, description, visibility, newOwnerId } = await req.json();
 
   // Get user with role
   const user = await prisma.user.findUnique({
@@ -116,7 +116,26 @@ export async function PATCH(
   // Get user's membership
   const membership = board.members.find(m => m.userId === user.id) || null;
 
-  // Check edit permission
+  // Ownership transfer requires owner or system admin
+  if (newOwnerId) {
+    if (!canDeleteBoard(user, board)) {
+      return NextResponse.json(
+        { error: "Only the owner can transfer ownership" },
+        { status: 403 }
+      );
+    }
+
+    // Validate new owner is a member
+    const newOwnerMember = board.members.find(m => m.userId === newOwnerId);
+    if (!newOwnerMember) {
+      return NextResponse.json(
+        { error: "New owner must be a board member" },
+        { status: 400 }
+      );
+    }
+  }
+
+  // Check edit permission for other changes
   if (!canEditBoard(user, board, membership)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -132,6 +151,7 @@ export async function PATCH(
       ...(name && { name: name.trim() }),
       ...(description !== undefined && { description: description?.trim() || null }),
       ...(visibility && { visibility }),
+      ...(newOwnerId && { ownerId: newOwnerId }),
     },
     include: {
       owner: { select: { id: true, name: true, email: true, image: true } },

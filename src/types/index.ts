@@ -103,3 +103,18 @@ export interface Attachment {
   createdAt: Date;
   uploadedBy?: User;
 }
+
+export interface BoardInvite {
+  id: string;
+  boardId: string;
+  email: string;
+  role: string;
+  token: string;
+  invitedById: string;
+  status: string;
+  expiresAt: Date;
+  createdAt: Date;
+  acceptedAt?: Date | null;
+  board?: Board;
+  invitedBy?: User;
+}

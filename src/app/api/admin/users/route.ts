@@ -26,8 +26,16 @@ export async function GET() {
       id: true,
       email: true,
       name: true,
+      image: true,
       role: true,
+      lastActiveAt: true,
       createdAt: true,
+      _count: {
+        select: {
+          ownedBoards: true,
+          boardMembers: true,
+        },
+      },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -60,6 +68,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Email is required" }, { status: 400 });
   }
 
+  // Validate role
+  if (role && !["admin", "manager", "user"].includes(role)) {
+    return NextResponse.json({ error: "Invalid role" }, { status: 400 });
+  }
+
   // Check if user already exists
   const existingUser = await prisma.user.findUnique({
     where: { email },
@@ -74,14 +87,22 @@ export async function POST(request: Request) {
     data: {
       email,
       name: name || null,
-      role: role || "member",
+      role: role || "user",
     },
     select: {
       id: true,
       email: true,
       name: true,
+      image: true,
       role: true,
+      lastActiveAt: true,
       createdAt: true,
+      _count: {
+        select: {
+          ownedBoards: true,
+          boardMembers: true,
+        },
+      },
     },
   });
 

@@ -71,7 +71,7 @@ export async function PATCH(
   const task = await prisma.task.findFirst({
     where: { id },
     include: {
-      column: { include: { board: { include: { members: true } } } },
+      column: { include: { board: { select: { id: true, ownerId: true, members: true } } } },
     },
   });
 
@@ -79,8 +79,9 @@ export async function PATCH(
     return NextResponse.json({ error: "Task not found" }, { status: 404 });
   }
 
+  const isOwner = task.column.board.ownerId === session.user.id;
   const isMember = task.column.board.members.some((m) => m.userId === session.user.id);
-  if (!isMember) {
+  if (!isOwner && !isMember) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -220,7 +221,7 @@ export async function DELETE(
   const task = await prisma.task.findFirst({
     where: { id },
     include: {
-      column: { include: { board: { include: { members: true } } } },
+      column: { include: { board: { select: { id: true, ownerId: true, members: true } } } },
     },
   });
 
@@ -228,8 +229,9 @@ export async function DELETE(
     return NextResponse.json({ error: "Task not found" }, { status: 404 });
   }
 
+  const isOwner = task.column.board.ownerId === session.user.id;
   const isMember = task.column.board.members.some((m) => m.userId === session.user.id);
-  if (!isMember) {
+  if (!isOwner && !isMember) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
