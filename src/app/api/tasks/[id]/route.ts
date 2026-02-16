@@ -73,7 +73,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const activities: { action: string; details: Record<string, unknown> }[] = [];
+  const activities: { action: string; details: object }[] = [];
 
   // Track changes for activity log
   if (columnId && columnId !== task.columnId) {
@@ -144,7 +144,7 @@ export async function PATCH(
         taskId: id,
         userId: session.user.id,
         action: activity.action,
-        details: activity.details,
+        details: activity.details as object,
       },
     });
   }

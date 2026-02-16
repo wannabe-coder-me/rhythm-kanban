@@ -526,7 +526,7 @@ export default function TableViewPage() {
                 <td className="px-4 py-3">
                   <select
                     value={task.priority}
-                    onChange={(e) => updateTask(task.id, { priority: e.target.value })}
+                    onChange={(e) => updateTask(task.id, { priority: e.target.value as Priority })}
                     className={clsx(
                       "px-2 py-1 rounded-full text-xs font-medium capitalize cursor-pointer border-none focus:outline-none",
                       priorityColors[task.priority as Priority]
