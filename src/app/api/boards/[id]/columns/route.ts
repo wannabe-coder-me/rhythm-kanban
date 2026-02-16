@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { emitBoardEvent } from "@/lib/events";
+import { getAuthUser } from "@/lib/mobile-auth";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  const user = await getAuthUser(req);
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -18,7 +17,7 @@ export async function GET(
   const columns = await prisma.column.findMany({
     where: {
       boardId: id,
-      board: { members: { some: { userId: session.user.id } } },
+      board: { members: { some: { userId: user.id } } },
     },
     orderBy: { position: "asc" },
     include: {
@@ -36,8 +35,8 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  const user = await getAuthUser(req);
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -49,7 +48,7 @@ export async function POST(
   }
 
   const member = await prisma.boardMember.findFirst({
-    where: { boardId: id, userId: session.user.id },
+    where: { boardId: id, userId: user.id },
   });
 
   if (!member) {
@@ -75,7 +74,7 @@ export async function POST(
   emitBoardEvent(id, {
     type: "column:created",
     column,
-    userId: session.user.id,
+    userId: user.id,
   });
 
   return NextResponse.json(column);
