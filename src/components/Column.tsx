@@ -165,10 +165,16 @@ export function Column({
         </div>
       </div>
 
-      {/* Tasks - droppable area */}
+      {/* Tasks - droppable area (click empty space to add task) */}
       <div
         ref={setDroppableRef}
-        className="flex-1 overflow-y-auto p-2 space-y-2 min-h-[100px]"
+        className="flex-1 overflow-y-auto p-2 space-y-2 min-h-[100px] cursor-pointer"
+        onClick={(e) => {
+          // Only trigger if clicking the container itself, not a card
+          if (e.target === e.currentTarget || (e.target as HTMLElement).closest('[data-task-id]') === null) {
+            setIsAdding(true);
+          }
+        }}
       >
         <SortableContext
           items={tasks.map((t) => t.id)}
@@ -184,6 +190,13 @@ export function Column({
             />
           ))}
         </SortableContext>
+        
+        {/* Visual hint for empty space */}
+        {tasks.length > 0 && !isAdding && (
+          <div className="h-8 flex items-center justify-center text-slate-600 text-xs opacity-0 hover:opacity-100 transition-opacity">
+            Click to add task
+          </div>
+        )}
       </div>
 
       {/* Add Task */}
