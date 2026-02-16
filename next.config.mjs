@@ -134,3 +134,4 @@ const nextConfig = {
 };
 
 export default withPWA(nextConfig);
+// Force rebuild Mon Feb 16 15:39:43 CST 2026
