@@ -4,20 +4,12 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isAdmin } from "@/lib/permissions";
 import { getTemplateById } from "@/lib/board-templates";
+import { getAuthUser } from "@/lib/mobile-auth";
 
-export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { id: true, role: true },
-  });
-
+export async function GET(req: NextRequest) {
+  const user = await getAuthUser(req);
   if (!user) {
-    return NextResponse.json({ error: "User not found" }, { status: 404 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   // System admins see all boards
@@ -40,8 +32,8 @@ export async function GET() {
   const boards = await prisma.board.findMany({
     where: {
       OR: [
-        { ownerId: session.user.id },
-        { members: { some: { userId: session.user.id } } },
+        { ownerId: user.id },
+        { members: { some: { userId: user.id } } },
         { visibility: "team" },
         { visibility: "public" },
       ],
@@ -57,17 +49,17 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  console.log("[POST /api/boards] Session:", session?.user?.id, session?.user?.email);
+  const user = await getAuthUser(req);
+  console.log("[POST /api/boards] User:", user?.id, user?.email);
   
-  if (!session?.user?.id) {
-    console.log("[POST /api/boards] No user ID in session");
+  if (!user) {
+    console.log("[POST /api/boards] No authenticated user");
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const body = await req.json();
   const { name, description, visibility = "private", templateId } = body;
-  console.log("[POST /api/boards] Creating board:", name, "for user:", session.user.id, "template:", templateId);
+  console.log("[POST /api/boards] Creating board:", name, "for user:", user.id, "template:", templateId);
 
   if (!name?.trim()) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
@@ -93,11 +85,11 @@ export async function POST(req: NextRequest) {
         name: name.trim(),
         description: description?.trim() || null,
         visibility,
-        ownerId: session.user.id,
+        ownerId: user.id,
         // Owner is automatically added as admin member
         members: {
           create: {
-            userId: session.user.id,
+            userId: user.id,
             role: "admin",
             joinedAt: new Date(),
           },
