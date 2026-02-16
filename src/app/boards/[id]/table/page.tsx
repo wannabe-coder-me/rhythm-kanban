@@ -375,11 +375,11 @@ export default function TableViewPage() {
       </header>
 
       {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-slate-800/80 sticky top-[120px]">
+      <div className="overflow-x-auto px-6 py-4">
+        <table className="w-full border-collapse">
+          <thead className="bg-slate-800 border-b-2 border-slate-600">
             <tr>
-              <th className="w-12 px-4 py-3">
+              <th className="w-12 px-4 py-4 text-left">
                 <input
                   type="checkbox"
                   checked={selectedTasks.size === sortedTasks.length && sortedTasks.length > 0}
