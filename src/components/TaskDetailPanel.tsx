@@ -7,6 +7,23 @@ import { format } from "date-fns";
 import clsx from "clsx";
 import { LabelSelector } from "./LabelSelector";
 import { RecurrenceSettings } from "./RecurrenceSettings";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface TaskDetailPanelProps {
   task: Task | null;
@@ -29,6 +46,146 @@ const priorityColors: Record<Priority, string> = {
   high: "bg-amber-500",
   urgent: "bg-red-500",
 };
+
+// Sortable Subtask Item Component
+interface SortableSubtaskItemProps {
+  subtask: Task;
+  isEditing: boolean;
+  editingTitle: string;
+  onToggleComplete: () => void;
+  onStartEdit: () => void;
+  onEditChange: (title: string) => void;
+  onEditSave: () => void;
+  onEditCancel: () => void;
+  onDelete: () => void;
+}
+
+function SortableSubtaskItem({
+  subtask,
+  isEditing,
+  editingTitle,
+  onToggleComplete,
+  onStartEdit,
+  onEditChange,
+  onEditSave,
+  onEditCancel,
+  onDelete,
+}: SortableSubtaskItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: subtask.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={clsx(
+        "flex items-center gap-2 p-2 bg-slate-700/50 rounded-lg group",
+        subtask.completed && "opacity-60",
+        isDragging && "shadow-lg"
+      )}
+    >
+      {/* Drag Handle */}
+      <button
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing p-1 text-slate-500 hover:text-slate-300 touch-none"
+        title="Drag to reorder"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+        </svg>
+      </button>
+
+      {/* Checkbox */}
+      <button
+        onClick={onToggleComplete}
+        className={clsx(
+          "w-5 h-5 rounded border flex items-center justify-center flex-shrink-0 transition-colors",
+          subtask.completed
+            ? "bg-green-500 border-green-500 text-white"
+            : "border-slate-500 hover:border-slate-400"
+        )}
+      >
+        {subtask.completed && (
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+          </svg>
+        )}
+      </button>
+
+      {/* Title */}
+      {isEditing ? (
+        <input
+          type="text"
+          value={editingTitle}
+          onChange={(e) => onEditChange(e.target.value)}
+          onBlur={onEditSave}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") onEditSave();
+            if (e.key === "Escape") onEditCancel();
+          }}
+          autoFocus
+          className="flex-1 bg-slate-600 border border-indigo-500 rounded px-2 py-0.5 text-sm text-white focus:outline-none"
+        />
+      ) : (
+        <span
+          onClick={onStartEdit}
+          className={clsx(
+            "flex-1 text-sm cursor-pointer hover:text-indigo-400",
+            subtask.completed ? "text-slate-400 line-through" : "text-white"
+          )}
+        >
+          {subtask.title}
+        </span>
+      )}
+
+      {/* Assignee */}
+      {subtask.assignee && (
+        <div
+          className="flex-shrink-0"
+          title={subtask.assignee.name || subtask.assignee.email}
+        >
+          {subtask.assignee.image ? (
+            <Image
+              src={subtask.assignee.image}
+              alt={subtask.assignee.name || ""}
+              width={20}
+              height={20}
+              className="rounded-full"
+            />
+          ) : (
+            <div className="w-5 h-5 bg-slate-600 rounded-full flex items-center justify-center text-[10px] text-white">
+              {(subtask.assignee.name || subtask.assignee.email)?.[0]?.toUpperCase()}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Delete Button */}
+      <button
+        onClick={onDelete}
+        className="opacity-0 group-hover:opacity-100 p-1 text-slate-500 hover:text-red-400 transition-all"
+        title="Delete subtask"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+  );
+}
 
 export function TaskDetailPanel({
   task,
@@ -176,6 +333,34 @@ export function TaskDetailPanel({
       }
     } catch (error) {
       console.error("Failed to delete subtask:", error);
+    }
+  };
+
+  // Drag and drop sensors for subtasks
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleSubtaskDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !task) return;
+
+    const oldIndex = subtasks.findIndex((s) => s.id === active.id);
+    const newIndex = subtasks.findIndex((s) => s.id === over.id);
+
+    const reordered = arrayMove(subtasks, oldIndex, newIndex);
+    setSubtasks(reordered);
+
+    // Update positions in backend
+    try {
+      await fetch(`/api/tasks/${task.id}/subtasks/reorder`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subtaskIds: reordered.map((s) => s.id) }),
+      });
+    } catch (error) {
+      console.error("Failed to reorder subtasks:", error);
     }
   };
 
@@ -868,93 +1053,37 @@ export function TaskDetailPanel({
               )}
             </div>
 
-            {/* Subtask List */}
-            <div className="space-y-2 mb-3">
-              {subtasks.map((subtask) => (
-                <div
-                  key={subtask.id}
-                  className={clsx(
-                    "flex items-center gap-2 p-2 bg-slate-700/50 rounded-lg group",
-                    subtask.completed && "opacity-60"
-                  )}
-                >
-                  <button
-                    onClick={() => toggleSubtaskComplete(subtask)}
-                    className={clsx(
-                      "w-5 h-5 rounded border flex items-center justify-center flex-shrink-0 transition-colors",
-                      subtask.completed
-                        ? "bg-green-500 border-green-500 text-white"
-                        : "border-slate-500 hover:border-slate-400"
-                    )}
-                  >
-                    {subtask.completed && (
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                      </svg>
-                    )}
-                  </button>
-
-                  {editingSubtaskId === subtask.id ? (
-                    <input
-                      type="text"
-                      value={editingSubtaskTitle}
-                      onChange={(e) => setEditingSubtaskTitle(e.target.value)}
-                      onBlur={() => updateSubtaskTitle(subtask.id, editingSubtaskTitle)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") updateSubtaskTitle(subtask.id, editingSubtaskTitle);
-                        if (e.key === "Escape") setEditingSubtaskId(null);
-                      }}
-                      autoFocus
-                      className="flex-1 bg-slate-600 border border-indigo-500 rounded px-2 py-0.5 text-sm text-white focus:outline-none"
-                    />
-                  ) : (
-                    <span
-                      onClick={() => {
+            {/* Subtask List - Sortable */}
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleSubtaskDragEnd}
+            >
+              <SortableContext
+                items={subtasks.map((s) => s.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-2 mb-3">
+                  {subtasks.map((subtask) => (
+                    <SortableSubtaskItem
+                      key={subtask.id}
+                      subtask={subtask}
+                      isEditing={editingSubtaskId === subtask.id}
+                      editingTitle={editingSubtaskTitle}
+                      onToggleComplete={() => toggleSubtaskComplete(subtask)}
+                      onStartEdit={() => {
                         setEditingSubtaskId(subtask.id);
                         setEditingSubtaskTitle(subtask.title);
                       }}
-                      className={clsx(
-                        "flex-1 text-sm cursor-pointer hover:text-indigo-400",
-                        subtask.completed ? "text-slate-400 line-through" : "text-white"
-                      )}
-                    >
-                      {subtask.title}
-                    </span>
-                  )}
-
-                  {subtask.assignee && (
-                    <div
-                      className="flex-shrink-0"
-                      title={subtask.assignee.name || subtask.assignee.email}
-                    >
-                      {subtask.assignee.image ? (
-                        <Image
-                          src={subtask.assignee.image}
-                          alt={subtask.assignee.name || ""}
-                          width={20}
-                          height={20}
-                          className="rounded-full"
-                        />
-                      ) : (
-                        <div className="w-5 h-5 bg-slate-600 rounded-full flex items-center justify-center text-[10px] text-white">
-                          {(subtask.assignee.name || subtask.assignee.email)?.[0]?.toUpperCase()}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <button
-                    onClick={() => deleteSubtask(subtask.id)}
-                    className="opacity-0 group-hover:opacity-100 p-1 text-slate-500 hover:text-red-400 transition-all"
-                    title="Delete subtask"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
+                      onEditChange={(title) => setEditingSubtaskTitle(title)}
+                      onEditSave={() => updateSubtaskTitle(subtask.id, editingSubtaskTitle)}
+                      onEditCancel={() => setEditingSubtaskId(null)}
+                      onDelete={() => deleteSubtask(subtask.id)}
+                    />
+                  ))}
                 </div>
-              ))}
-            </div>
+              </SortableContext>
+            </DndContext>
 
             {/* Add Subtask Input */}
             <div className="flex gap-2">
