@@ -126,7 +126,7 @@ export async function PATCH(
     const newColumn = await prisma.column.findUnique({ where: { id: columnId } });
     activities.push({
       action: "moved",
-      details: { from: task.column.name, to: newColumn?.name },
+      details: { from: task.column.name, to: newColumn?.name } as Record<string, unknown>,
     });
   }
 
@@ -136,7 +136,7 @@ export async function PATCH(
       : null;
     activities.push({
       action: "assigned",
-      details: { assignee: newAssignee?.name || "Unassigned" },
+      details: { assignee: newAssignee?.name || "Unassigned" } as Record<string, unknown>,
     });
 
     // Send notification to the new assignee (if not self-assigning)
