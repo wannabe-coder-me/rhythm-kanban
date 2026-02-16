@@ -543,6 +543,48 @@ export function BoardSettings({
                   ))}
                 </div>
               )}
+
+              {/* Pending Invites Section */}
+              {canEdit && pendingInvites.length > 0 && (
+                <div className="mt-6 pt-6 border-t border-slate-700">
+                  <h4 className="text-sm font-medium text-slate-400 mb-3">
+                    Pending Invites ({pendingInvites.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {pendingInvites.map((invite) => (
+                      <div
+                        key={invite.id}
+                        className="flex items-center justify-between bg-slate-700/30 rounded-lg p-3 border border-dashed border-slate-600"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-slate-600/50 flex items-center justify-center text-slate-400">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                          <div>
+                            <div className="text-white font-medium">{invite.email}</div>
+                            <div className="text-slate-400 text-xs flex items-center gap-2">
+                              <span className="capitalize">{invite.role}</span>
+                              <span>•</span>
+                              <span>Expires in {formatExpiry(invite.expiresAt)}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleRevokeInvite(invite.id)}
+                          className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-600 rounded transition-colors"
+                          title="Revoke invite"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
