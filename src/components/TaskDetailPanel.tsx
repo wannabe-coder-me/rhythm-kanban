@@ -769,6 +769,14 @@ export function TaskDetailPanel({
             />
           </div>
 
+          {/* Custom Fields */}
+          <CustomFieldsSection
+            boardId={boardId}
+            taskId={task.id}
+            customFieldValues={customFieldValues}
+            onUpdate={handleCustomFieldUpdate}
+          />
+
           {/* Dependencies */}
           <div>
             <div className="flex items-center justify-between mb-2">
