@@ -7,6 +7,14 @@ export interface User {
   image: string | null;
 }
 
+export interface Label {
+  id: string;
+  boardId: string;
+  name: string;
+  color: string;
+  createdAt: Date;
+}
+
 export interface Board {
   id: string;
   name: string;
@@ -15,6 +23,7 @@ export interface Board {
   updatedAt: Date;
   columns?: Column[];
   members?: BoardMember[];
+  labels?: Label[];
 }
 
 export interface BoardMember {
@@ -42,7 +51,7 @@ export interface Task {
   position: number;
   priority: Priority;
   dueDate: Date | null;
-  labels: string[];
+  labels: Label[];
   completed: boolean;
   assigneeId: string | null;
   createdById: string;

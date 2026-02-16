@@ -84,6 +84,14 @@ Attachment
 ├── mimeType, size, uploadedById
 ├── createdAt
 ├── Linked to Task + User (uploader)
+
+Label (planned)
+├── id, boardId, name, color
+├── tasks (many-to-many)
+
+Notification (planned)
+├── id, userId, type, title, message
+├── link, read, createdAt
 ```
 
 ## Authentication
@@ -134,6 +142,37 @@ Attachment
 - Drag column headers to rearrange
 - Position persists via API
 
+## Planned Features (In Progress)
+
+### Labels/Tags
+- Colored labels per board (red, blue, green, etc.)
+- Assign multiple labels to tasks
+- Label management in board settings
+- API: `/api/boards/[id]/labels`
+
+### Filters & Search
+- Filter bar above kanban columns
+- Filter by: assignee, priority, due date, labels
+- Search task title/description
+- Filters persist in URL params
+
+### Real-time Updates
+- Server-Sent Events (SSE) for live board updates
+- See changes when teammates move/edit tasks
+- Endpoint: `/api/boards/[id]/events`
+- Hook: `useBoardEvents(boardId, onEvent)`
+
+### Notifications
+- In-app notifications (assigned, mentioned, comments, due soon)
+- Bell icon with unread count in header
+- Notifications page at `/notifications`
+- API: `/api/notifications`
+
+### My Tasks View
+- `/my-tasks` - All tasks assigned to current user
+- Grouped by due date (Overdue, Today, This Week, etc.)
+- Quick actions: mark complete, change priority
+
 ## Environment Variables
 
 ```bash
@@ -181,3 +220,7 @@ npm run dev
 | GET/POST | `/api/admin/users` | Admin: list/add users |
 | PATCH/DELETE | `/api/admin/users/[id]` | Admin: update/delete user |
 | PATCH | `/api/boards/[id]/columns/reorder` | Reorder columns |
+| GET/POST/PATCH/DELETE | `/api/boards/[id]/labels` | Board labels (planned) |
+| GET | `/api/boards/[id]/events` | SSE real-time stream (planned) |
+| GET/PATCH/DELETE | `/api/notifications` | User notifications (planned) |
+| GET | `/api/my-tasks` | Tasks assigned to user (planned) |

@@ -29,10 +29,12 @@ export async function GET(
             include: {
               assignee: true,
               createdBy: true,
+              labels: true,
               subtasks: {
                 orderBy: { position: "asc" },
                 include: {
                   assignee: true,
+                  labels: true,
                 },
               },
               _count: {
@@ -44,6 +46,9 @@ export async function GET(
       },
       members: {
         include: { user: true },
+      },
+      labels: {
+        orderBy: { createdAt: "asc" },
       },
     },
   });

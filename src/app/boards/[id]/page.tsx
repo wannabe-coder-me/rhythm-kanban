@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -26,6 +26,8 @@ import type { Board, Column as ColumnType, Task, User, Priority } from "@/types"
 import { Column } from "@/components/Column";
 import { TaskCard } from "@/components/TaskCard";
 import { TaskDetailPanel } from "@/components/TaskDetailPanel";
+import { FilterBar } from "@/components/FilterBar";
+import { useFilters } from "@/hooks/useFilters";
 
 type DragType = "task" | "column";
 
@@ -34,7 +36,7 @@ interface ActiveDrag {
   item: Task | ColumnType;
 }
 
-export default function BoardPage() {
+function BoardPageContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const params = useParams();
@@ -46,11 +48,18 @@ export default function BoardPage() {
   const [loading, setLoading] = useState(true);
   const [activeDrag, setActiveDrag] = useState<ActiveDrag | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filterPriority, setFilterPriority] = useState<Priority | "all">("all");
-  const [filterAssignee, setFilterAssignee] = useState<string>("all");
   const [showAddColumn, setShowAddColumn] = useState(false);
   const [newColumnName, setNewColumnName] = useState("");
+
+  // Use the new filter system
+  const {
+    filters,
+    updateFilters,
+    clearFilters,
+    activeFilterCount,
+    hasActiveFilters,
+    filterTasks,
+  } = useFilters();
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -391,28 +400,38 @@ export default function BoardPage() {
     }
   };
 
+  // Collect all unique labels from tasks
+  const allLabels = useMemo(() => {
+    const labels = new Set<string>();
+    columns.forEach((col) => {
+      col.tasks?.forEach((task) => {
+        task.labels?.forEach((label) => labels.add(label));
+      });
+    });
+    return Array.from(labels).sort();
+  }, [columns]);
+
   // Filter tasks - only show parent tasks (not subtasks)
   const filteredColumns = useMemo(() => {
-    return columns.map((col) => ({
-      ...col,
-      tasks:
-        col.tasks?.filter((task) => {
-          // Filter out subtasks - they'll be shown under their parent
-          if (task.parentId) return false;
-          
-          if (searchQuery && !task.title.toLowerCase().includes(searchQuery.toLowerCase())) {
-            return false;
-          }
-          if (filterPriority !== "all" && task.priority !== filterPriority) {
-            return false;
-          }
-          if (filterAssignee !== "all" && task.assigneeId !== filterAssignee) {
-            return false;
-          }
-          return true;
-        }) || [],
-    }));
-  }, [columns, searchQuery, filterPriority, filterAssignee]);
+    return columns.map((col) => {
+      // First filter out subtasks, then apply user filters
+      const parentTasks = col.tasks?.filter((task) => !task.parentId) || [];
+      const filtered = filterTasks(parentTasks);
+      return { ...col, tasks: filtered };
+    });
+  }, [columns, filterTasks]);
+
+  // Check if any tasks match after filtering
+  const totalFilteredTasks = useMemo(() => {
+    return filteredColumns.reduce((sum, col) => sum + (col.tasks?.length || 0), 0);
+  }, [filteredColumns]);
+
+  const totalTasks = useMemo(() => {
+    return columns.reduce(
+      (sum, col) => sum + (col.tasks?.filter((t) => !t.parentId).length || 0),
+      0
+    );
+  }, [columns]);
 
   // Column IDs for sortable context
   const columnIds = useMemo(() => columns.map((col) => col.id), [columns]);

@@ -24,6 +24,7 @@ export async function GET(
     include: {
       assignee: true,
       createdBy: true,
+      labels: true,
       comments: {
         include: { user: true },
         orderBy: { createdAt: "desc" },
@@ -35,7 +36,7 @@ export async function GET(
       },
       column: true,
       subtasks: {
-        include: { assignee: true },
+        include: { assignee: true, labels: true },
         orderBy: { position: "asc" },
       },
       attachments: {
@@ -63,7 +64,7 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await req.json();
-  const { title, description, priority, dueDate, labels, assigneeId, columnId, position, completed } = body;
+  const { title, description, priority, dueDate, labelIds, assigneeId, columnId, position, completed } = body;
 
   const task = await prisma.task.findFirst({
     where: { id },
@@ -135,16 +136,21 @@ export async function PATCH(
       ...(description !== undefined && { description: description?.trim() || null }),
       ...(priority && { priority }),
       ...(dueDate !== undefined && { dueDate: dueDate ? new Date(dueDate) : null }),
-      ...(labels && { labels }),
+      ...(labelIds !== undefined && {
+        labels: {
+          set: labelIds.map((labelId: string) => ({ id: labelId })),
+        },
+      }),
       ...(assigneeId !== undefined && { assigneeId: assigneeId || null }),
       ...(completed !== undefined && { completed }),
     },
     include: {
       assignee: true,
       createdBy: true,
+      labels: true,
       column: true,
       subtasks: {
-        include: { assignee: true },
+        include: { assignee: true, labels: true },
         orderBy: { position: "asc" },
       },
     },
