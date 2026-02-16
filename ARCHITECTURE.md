@@ -78,6 +78,12 @@ Task
 
 Comment / Activity
 ├── Linked to Task + User
+
+Attachment
+├── id, taskId, filename, url
+├── mimeType, size, uploadedById
+├── createdAt
+├── Linked to Task + User (uploader)
 ```
 
 ## Authentication
@@ -115,6 +121,14 @@ Comment / Activity
 - Nested subtasks with progress bar (X/Y completed)
 - Checkable directly from board view
 - Subtasks follow parent (not separately draggable)
+
+### File Attachments
+- Drag-and-drop upload zone in task detail panel
+- Supports images, PDFs, docs, spreadsheets (max 10MB)
+- Files stored in `/public/uploads/{taskId}/`
+- Attachment count shown on task cards (📎 3)
+- Image previews, file type icons
+- Activity log for attachments
 
 ### Column Reordering
 - Drag column headers to rearrange
@@ -163,6 +177,7 @@ npm run dev
 | POST | `/api/columns/[id]/tasks` | Create task |
 | GET/PATCH/DELETE | `/api/tasks/[id]` | Task CRUD |
 | GET/POST | `/api/tasks/[id]/comments` | Task comments |
+| GET/POST/DELETE | `/api/tasks/[id]/attachments` | Task file attachments |
 | GET/POST | `/api/admin/users` | Admin: list/add users |
 | PATCH/DELETE | `/api/admin/users/[id]` | Admin: update/delete user |
 | PATCH | `/api/boards/[id]/columns/reorder` | Reorder columns |

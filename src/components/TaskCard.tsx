@@ -148,6 +148,14 @@ export function TaskCard({ task, onClick, onToggleSubtask }: TaskCardProps) {
                 {format(new Date(task.dueDate), "MMM d")}
               </span>
             )}
+            {task._count?.attachments && task._count.attachments > 0 && (
+              <span
+                className="flex items-center gap-1"
+                title={`${task._count.attachments} attachment${task._count.attachments !== 1 ? 's' : ''}`}
+              >
+                📎 {task._count.attachments}
+              </span>
+            )}
             <span
               className={clsx(
                 "w-2 h-2 rounded-full",
