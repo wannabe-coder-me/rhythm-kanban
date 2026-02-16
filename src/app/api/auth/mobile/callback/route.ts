@@ -102,6 +102,42 @@ export async function GET(req: NextRequest) {
 }
 
 function redirectToApp(params: Record<string, string>) {
+  // For Expo Go, we can't use custom schemes - show a success page instead
+  if (params.token) {
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Login Successful</title>
+  <style>
+    body { font-family: -apple-system, system-ui, sans-serif; background: #1a1a2e; color: #fff; 
+           display: flex; flex-direction: column; align-items: center; justify-content: center; 
+           min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+    h1 { color: #4ade80; margin-bottom: 10px; }
+    p { color: #a0a0a0; margin-bottom: 30px; }
+    .token-box { background: #2a2a4e; padding: 15px; border-radius: 8px; word-break: break-all; 
+                 font-family: monospace; font-size: 12px; max-width: 100%; margin-bottom: 20px; }
+    button { background: #6366f1; color: white; border: none; padding: 15px 30px; 
+             border-radius: 8px; font-size: 16px; cursor: pointer; margin: 5px; }
+    button:active { background: #4f46e5; }
+    .hint { font-size: 14px; color: #666; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>✓ Login Successful</h1>
+  <p>Copy this token and paste it in the app:</p>
+  <div class="token-box" id="token">${params.token}</div>
+  <button onclick="navigator.clipboard.writeText('${params.token}').then(() => { this.textContent = 'Copied!'; })">
+    Copy Token
+  </button>
+  <p class="hint">Go back to Expo Go and paste the token</p>
+</body>
+</html>`;
+    return new NextResponse(html, { headers: { 'Content-Type': 'text/html' } });
+  }
+  
+  // Error case - redirect with error
   const url = new URL(`${APP_SCHEME}://auth`);
   Object.entries(params).forEach(([key, value]) => {
     url.searchParams.set(key, value);
