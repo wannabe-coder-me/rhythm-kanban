@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
-import type { Task, User, Comment, Activity, Column, Priority, Attachment, Label, TaskDependency } from "@/types";
+import type { Task, User, Comment, Activity, Column, Priority, Attachment, Label, TaskDependency, CustomFieldValue } from "@/types";
 import { format } from "date-fns";
 import clsx from "clsx";
 import { LabelSelector } from "./LabelSelector";
 import { RecurrenceSettings } from "./RecurrenceSettings";
+import { CustomFieldsSection } from "./CustomFieldsSection";
 import {
   DndContext,
   closestCenter,
@@ -225,6 +226,9 @@ export function TaskDetailPanel({
   const [lastRecurrence, setLastRecurrence] = useState<Date | null>(null);
   const [parentRecurringId, setParentRecurringId] = useState<string | null>(null);
   
+  // Custom fields state
+  const [customFieldValues, setCustomFieldValues] = useState<CustomFieldValue[]>([]);
+
   // Dependency state
   const [blockedBy, setBlockedBy] = useState<TaskDependency[]>([]);
   const [blocking, setBlocking] = useState<TaskDependency[]>([]);
@@ -250,6 +254,7 @@ export function TaskDetailPanel({
       setRecurrenceRule(task.recurrenceRule || null);
       setLastRecurrence(task.lastRecurrence || null);
       setParentRecurringId(task.parentRecurringId || null);
+      setCustomFieldValues(task.customFieldValues || []);
       fetchTaskDetails();
     }
   }, [task]);
@@ -269,6 +274,23 @@ export function TaskDetailPanel({
       }
     } catch (error) {
       console.error("Failed to fetch task details:", error);
+    }
+  };
+
+  const handleCustomFieldUpdate = async (customFields: Record<string, string | boolean | null>) => {
+    if (!task) return;
+    try {
+      const res = await fetch(`/api/tasks/${task.id}/custom-fields`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ customFields }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setCustomFieldValues(updated.customFieldValues || []);
+      }
+    } catch (error) {
+      console.error("Failed to update custom fields:", error);
     }
   };
 
