@@ -15,12 +15,17 @@ export interface Label {
   createdAt: Date;
 }
 
+export type BoardVisibility = "private" | "team" | "public";
+
 export interface Board {
   id: string;
   name: string;
   description: string | null;
+  visibility: BoardVisibility;
+  ownerId: string | null;
   createdAt: Date;
   updatedAt: Date;
+  owner?: User | null;
   columns?: Column[];
   members?: BoardMember[];
   labels?: Label[];

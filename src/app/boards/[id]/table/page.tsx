@@ -574,10 +574,15 @@ function TableViewContent() {
                     {task.labels?.map((label) => {
                       const labelName = typeof label === 'string' ? label : label.name;
                       const labelId = typeof label === 'string' ? label : label.id;
+                      const labelColor = typeof label === 'string' ? '#6366f1' : label.color;
                       return (
                         <span
                           key={labelId}
-                          className="px-2 py-0.5 bg-indigo-500/20 text-indigo-300 text-xs rounded-full"
+                          className="px-2 py-0.5 text-xs rounded-full"
+                          style={{
+                            backgroundColor: `${labelColor}30`,
+                            color: labelColor,
+                          }}
                         >
                           {labelName}
                         </span>

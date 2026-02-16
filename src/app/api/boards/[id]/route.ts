@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { canViewBoard, canEditBoard, canDeleteBoard } from "@/lib/permissions";
 
 export async function GET(
   req: NextRequest,
@@ -14,17 +15,26 @@ export async function GET(
 
   const { id } = await params;
 
-  const board = await prisma.board.findFirst({
-    where: {
-      id,
-      members: { some: { userId: session.user.id } },
-    },
+  // Get user with role
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true, role: true },
+  });
+
+  if (!user) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  // Get board with owner and members
+  const board = await prisma.board.findUnique({
+    where: { id },
     include: {
+      owner: { select: { id: true, name: true, email: true, image: true } },
       columns: {
         orderBy: { position: "asc" },
         include: {
           tasks: {
-            where: { parentId: null }, // Only parent tasks, not subtasks
+            where: { parentId: null },
             orderBy: { position: "asc" },
             include: {
               assignee: true,
@@ -45,7 +55,10 @@ export async function GET(
         },
       },
       members: {
-        include: { user: true },
+        include: { 
+          user: { select: { id: true, name: true, email: true, image: true } },
+          invitedBy: { select: { id: true, name: true } },
+        },
       },
       labels: {
         orderBy: { createdAt: "asc" },
@@ -55,6 +68,14 @@ export async function GET(
 
   if (!board) {
     return NextResponse.json({ error: "Board not found" }, { status: 404 });
+  }
+
+  // Get user's membership
+  const membership = board.members.find(m => m.userId === user.id) || null;
+
+  // Check view permission
+  if (!canViewBoard(user, board, membership)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   return NextResponse.json(board);
@@ -70,25 +91,54 @@ export async function PATCH(
   }
 
   const { id } = await params;
-  const { name, description } = await req.json();
+  const { name, description, visibility } = await req.json();
 
-  const member = await prisma.boardMember.findFirst({
-    where: { boardId: id, userId: session.user.id },
+  // Get user with role
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true, role: true },
   });
 
-  if (!member || member.role === "member") {
+  if (!user) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  // Get board with members
+  const board = await prisma.board.findUnique({
+    where: { id },
+    include: { members: true },
+  });
+
+  if (!board) {
+    return NextResponse.json({ error: "Board not found" }, { status: 404 });
+  }
+
+  // Get user's membership
+  const membership = board.members.find(m => m.userId === user.id) || null;
+
+  // Check edit permission
+  if (!canEditBoard(user, board, membership)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const board = await prisma.board.update({
+  // Validate visibility if provided
+  if (visibility && !["private", "team", "public"].includes(visibility)) {
+    return NextResponse.json({ error: "Invalid visibility" }, { status: 400 });
+  }
+
+  const updated = await prisma.board.update({
     where: { id },
     data: {
       ...(name && { name: name.trim() }),
       ...(description !== undefined && { description: description?.trim() || null }),
+      ...(visibility && { visibility }),
+    },
+    include: {
+      owner: { select: { id: true, name: true, email: true, image: true } },
     },
   });
 
-  return NextResponse.json(board);
+  return NextResponse.json(updated);
 }
 
 export async function DELETE(
@@ -102,11 +152,27 @@ export async function DELETE(
 
   const { id } = await params;
 
-  const member = await prisma.boardMember.findFirst({
-    where: { boardId: id, userId: session.user.id },
+  // Get user with role
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true, role: true },
   });
 
-  if (!member || member.role !== "owner") {
+  if (!user) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  // Get board
+  const board = await prisma.board.findUnique({
+    where: { id },
+  });
+
+  if (!board) {
+    return NextResponse.json({ error: "Board not found" }, { status: 404 });
+  }
+
+  // Check delete permission (only owner or system admin)
+  if (!canDeleteBoard(user, board)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

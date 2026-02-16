@@ -8,23 +8,27 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(uuid())
-  email         String    @unique
-  emailVerified DateTime?
-  name          String?
-  image         String?
-  role          String    @default("member") // admin, member
-  createdAt     DateTime  @default(now())
+  id               String         @id @default(uuid())
+  email            String         @unique
+  emailVerified    DateTime?
+  name             String?
+  image            String?
+  role             String         @default("member") // admin, member
+  createdAt        DateTime       @default(now())
+  lastActiveAt     DateTime?
   
-  accounts      Account[]
-  sessions      Session[]
-  boardMembers  BoardMember[]
-  tasksAssigned Task[]    @relation("TaskAssignee")
-  tasksCreated  Task[]    @relation("TaskCreator")
-  comments      Comment[]
-  activities    Activity[]
-  attachments   Attachment[]
-  notifications Notification[]
+  accounts         Account[]
+  sessions         Session[]
+  boardMembers     BoardMember[]
+  ownedBoards      Board[]        @relation("BoardOwner")
+  boardInvitesSent BoardInvite[]  @relation("InviteSender")
+  membersInvited   BoardMember[]  @relation("MemberInviter")
+  tasksAssigned    Task[]         @relation("TaskAssignee")
+  tasksCreated     Task[]         @relation("TaskCreator")
+  comments         Comment[]
+  activities       Activity[]
+  attachments      Attachment[]
+  notifications    Notification[]
 }
 
 model Notification {
@@ -69,25 +73,55 @@ model Session {
 }
 
 model Board {
-  id          String   @id @default(uuid())
+  id          String        @id @default(uuid())
   name        String
   description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  visibility  String        @default("private") // private, team, public
+  ownerId     String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
   
+  owner       User          @relation("BoardOwner", fields: [ownerId], references: [id])
   columns     Column[]
   members     BoardMember[]
   labels      Label[]
+  invites     BoardInvite[]
 }
 
 model BoardMember {
-  id      String @id @default(uuid())
-  boardId String
-  userId  String
-  role    String @default("member")
-  board   Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
-  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String    @id @default(uuid())
+  boardId     String
+  userId      String
+  role        String    @default("member") // owner, admin, member
+  invitedAt   DateTime  @default(now())
+  invitedById String?
+  joinedAt    DateTime?
+  
+  board       Board     @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invitedBy   User?     @relation("MemberInviter", fields: [invitedById], references: [id])
+  
   @@unique([boardId, userId])
+}
+
+model BoardInvite {
+  id          String    @id @default(uuid())
+  boardId     String
+  email       String
+  role        String    @default("member") // owner, admin, member
+  token       String    @unique @default(uuid())
+  invitedById String
+  status      String    @default("pending") // pending, accepted, revoked, expired
+  expiresAt   DateTime
+  createdAt   DateTime  @default(now())
+  acceptedAt  DateTime?
+  
+  board       Board     @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  invitedBy   User      @relation("InviteSender", fields: [invitedById], references: [id])
+  
+  @@unique([boardId, email])
+  @@index([email, status])
+  @@index([token])
 }
 
 model Column {

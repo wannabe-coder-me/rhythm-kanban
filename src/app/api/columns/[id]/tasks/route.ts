@@ -27,6 +27,7 @@ export async function GET(
     include: {
       assignee: true,
       createdBy: true,
+      labels: true,
       subtasks: {
         select: { id: true, completed: true },
       },
@@ -46,7 +47,7 @@ export async function POST(
   }
 
   const { id } = await params;
-  const { title, description, priority, dueDate, labels, assigneeId, parentId } = await req.json();
+  const { title, description, priority, dueDate, labelIds, assigneeId, parentId } = await req.json();
 
   if (!title?.trim()) {
     return NextResponse.json({ error: "Title is required" }, { status: 400 });
@@ -78,15 +79,20 @@ export async function POST(
       description: description?.trim() || null,
       priority: priority || "medium",
       dueDate: dueDate ? new Date(dueDate) : null,
-      labels: labels || [],
       assigneeId: assigneeId || null,
       createdById: session.user.id,
       position: (maxPosition._max.position ?? -1) + 1,
       parentId: parentId || null,
+      ...(labelIds && labelIds.length > 0 && {
+        labels: {
+          connect: labelIds.map((id: string) => ({ id })),
+        },
+      }),
     },
     include: {
       assignee: true,
       createdBy: true,
+      labels: true,
       subtasks: {
         select: { id: true, completed: true },
       },
