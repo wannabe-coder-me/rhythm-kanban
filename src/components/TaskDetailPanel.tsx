@@ -462,6 +462,7 @@ export function TaskDetailPanel({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               onBlur={handleSave}
+              data-task-title-input
               className="w-full bg-transparent text-xl font-semibold text-white border-none focus:outline-none focus:ring-0"
               placeholder="Task title"
             />

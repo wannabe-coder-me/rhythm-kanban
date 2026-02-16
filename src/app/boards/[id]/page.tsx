@@ -284,6 +284,15 @@ function BoardPageContent() {
     return columns.flatMap((col) => col.tasks || []);
   }, [columns]);
 
+  // All board tasks with column info (for dependency picker)
+  const allBoardTasks = useMemo(() => {
+    return columns.flatMap((col) =>
+      (col.tasks || [])
+        .filter((t) => !t.parentId) // Only parent tasks
+        .map((t) => ({ ...t, column: col }))
+    );
+  }, [columns]);
+
   // Find which column a task belongs to
   const findColumnByTaskId = useCallback(
     (taskId: string): ColumnType | undefined => {
@@ -1171,6 +1180,7 @@ function BoardPageContent() {
           users={users}
           boardId={boardId}
           availableLabels={availableLabels}
+          allBoardTasks={allBoardTasks}
           onClose={() => setSelectedTask(null)}
           onUpdate={handleUpdateTask}
           onDelete={handleDeleteTask}
@@ -1214,6 +1224,13 @@ function BoardPageContent() {
         boardId={boardId}
         isOpen={showInviteModal}
         onClose={() => setShowInviteModal(false)}
+      />
+
+      {/* Keyboard Shortcuts Modal */}
+      <KeyboardShortcutsModal
+        isOpen={showKeyboardShortcuts}
+        onClose={() => setShowKeyboardShortcuts(false)}
+        shortcuts={shortcuts}
       />
 
       {/* Toast notifications for real-time updates */}

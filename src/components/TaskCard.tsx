@@ -55,6 +55,12 @@ export function TaskCard({ task, onClick, onToggleSubtask, isSelected = false }:
   const totalSubtasks = task.subtasks?.length || 0;
   const allSubtasksComplete = completedSubtasks === totalSubtasks && totalSubtasks > 0;
 
+  // Check if task is blocked by incomplete dependencies
+  const blockedByCount = task.blockedBy?.filter(
+    (d) => d.blockedBy && !d.blockedBy.completed
+  ).length || 0;
+  const isBlocked = blockedByCount > 0;
+
   const handleToggleSubtask = (e: React.MouseEvent, subtaskId: string, currentState: boolean) => {
     e.stopPropagation();
     onToggleSubtask?.(subtaskId, !currentState);
@@ -80,9 +86,19 @@ export function TaskCard({ task, onClick, onToggleSubtask, isSelected = false }:
           "border-l-4",
           priorityBorders[task.priority as Priority],
           isDragging && "opacity-50 shadow-2xl rotate-2",
-          isSelected && "ring-2 ring-indigo-500 ring-offset-2 ring-offset-slate-800"
+          isSelected && "ring-2 ring-indigo-500 ring-offset-2 ring-offset-slate-800",
+          isBlocked && "opacity-70 bg-slate-700/80"
         )}
       >
+        {/* Blocked indicator */}
+        {isBlocked && (
+          <div className="flex items-center gap-1.5 text-amber-400 text-xs mb-2" title={`Blocked by ${blockedByCount} task${blockedByCount > 1 ? 's' : ''}`}>
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            <span>Blocked by {blockedByCount} task{blockedByCount > 1 ? 's' : ''}</span>
+          </div>
+        )}
         <h4 className="text-sm font-medium text-white mb-2">{task.title}</h4>
 
         {/* Subtasks Summary with expand toggle */}
@@ -181,6 +197,14 @@ export function TaskCard({ task, onClick, onToggleSubtask, isSelected = false }:
                 title={`${task._count.attachments} attachment${task._count.attachments !== 1 ? 's' : ''}`}
               >
                 📎 {task._count.attachments}
+              </span>
+            )}
+            {(task.isRecurring || task.parentRecurringId) && (
+              <span
+                className="flex items-center"
+                title={task.isRecurring ? "Recurring task" : "Instance of recurring task"}
+              >
+                🔄
               </span>
             )}
             <span

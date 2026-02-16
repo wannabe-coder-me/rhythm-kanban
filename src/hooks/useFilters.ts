@@ -6,6 +6,7 @@ import type { Priority, Task, Label } from "@/types";
 import { isToday, isThisWeek, isPast, startOfDay } from "date-fns";
 
 export type DueDateFilter = "all" | "overdue" | "today" | "this_week" | "no_date";
+export type DependencyFilter = "all" | "blocked" | "unblocked";
 
 export interface FilterState {
   search: string;
@@ -13,6 +14,7 @@ export interface FilterState {
   priorities: Priority[];
   dueDateFilter: DueDateFilter;
   labelIds: string[];
+  dependencyFilter: DependencyFilter;
 }
 
 const DEFAULT_FILTERS: FilterState = {
@@ -21,6 +23,7 @@ const DEFAULT_FILTERS: FilterState = {
   priorities: [],
   dueDateFilter: "all",
   labelIds: [],
+  dependencyFilter: "all",
 };
 
 export function useFilters() {
@@ -38,8 +41,9 @@ export function useFilters() {
     const priorities = (searchParams.get("priorities")?.split(",").filter(Boolean) || []) as Priority[];
     const dueDateFilter = (searchParams.get("due") || "all") as DueDateFilter;
     const labelIds = searchParams.get("labels")?.split(",").filter(Boolean) || [];
+    const dependencyFilter = (searchParams.get("deps") || "all") as DependencyFilter;
     
-    return { search, assigneeIds, priorities, dueDateFilter, labelIds };
+    return { search, assigneeIds, priorities, dueDateFilter, labelIds, dependencyFilter };
   }, [searchParams]);
 
   // Debounce search
@@ -87,6 +91,12 @@ export function useFilters() {
       params.delete("labels");
     }
     
+    if (updatedFilters.dependencyFilter !== "all") {
+      params.set("deps", updatedFilters.dependencyFilter);
+    } else {
+      params.delete("deps");
+    }
+    
     const queryString = params.toString();
     router.replace(`${pathname}${queryString ? `?${queryString}` : ""}`, { scroll: false });
   }, [filters, pathname, router, searchParams]);
@@ -103,6 +113,7 @@ export function useFilters() {
     if (filters.priorities.length > 0) count++;
     if (filters.dueDateFilter !== "all") count++;
     if (filters.labelIds.length > 0) count++;
+    if (filters.dependencyFilter !== "all") count++;
     return count;
   }, [filters]);
 
@@ -166,6 +177,20 @@ export function useFilters() {
           typeof l === 'string' ? l : l.id
         );
         if (!filters.labelIds.some(labelId => taskLabelIds.includes(labelId))) {
+          return false;
+        }
+      }
+
+      // Dependency filter
+      if (filters.dependencyFilter !== "all") {
+        const hasIncompleteBlockers = task.blockedBy?.some(
+          (d) => d.blockedBy && !d.blockedBy.completed
+        ) || false;
+        
+        if (filters.dependencyFilter === "blocked" && !hasIncompleteBlockers) {
+          return false;
+        }
+        if (filters.dependencyFilter === "unblocked" && hasIncompleteBlockers) {
           return false;
         }
       }

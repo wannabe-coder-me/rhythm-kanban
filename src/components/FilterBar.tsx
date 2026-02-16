@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import type { User, Priority } from "@/types";
-import type { FilterState, DueDateFilter } from "@/hooks/useFilters";
+import type { FilterState, DueDateFilter, DependencyFilter } from "@/hooks/useFilters";
 import clsx from "clsx";
 
 interface LabelOption {
@@ -32,6 +32,12 @@ const dueDateOptions: { value: DueDateFilter; label: string }[] = [
   { value: "today", label: "Today" },
   { value: "this_week", label: "This Week" },
   { value: "no_date", label: "No Date" },
+];
+
+const dependencyOptions: { value: DependencyFilter; label: string }[] = [
+  { value: "all", label: "All Tasks" },
+  { value: "blocked", label: "🔒 Blocked" },
+  { value: "unblocked", label: "✓ Unblocked" },
 ];
 
 export function FilterBar({
@@ -64,6 +70,7 @@ export function FilterBar({
           value={filters.search}
           onChange={(e) => onFilterChange({ search: e.target.value })}
           placeholder="Search tasks..."
+          data-filter-search
           className="w-full bg-slate-700 border border-slate-600 rounded-lg pl-9 pr-3 py-1.5 text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
         {filters.search && (

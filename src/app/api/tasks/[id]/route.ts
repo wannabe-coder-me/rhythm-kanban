@@ -94,7 +94,7 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await req.json();
-  const { title, description, priority, dueDate, labelIds, assigneeId, columnId, position, completed } = body;
+  const { title, description, priority, dueDate, labelIds, assigneeId, columnId, position, completed, isRecurring, recurrenceRule } = body;
 
   const task = await prisma.task.findFirst({
     where: { id },
@@ -189,6 +189,8 @@ export async function PATCH(
       }),
       ...(assigneeId !== undefined && { assigneeId: assigneeId || null }),
       ...(completed !== undefined && { completed }),
+      ...(isRecurring !== undefined && { isRecurring }),
+      ...(recurrenceRule !== undefined && { recurrenceRule }),
     },
     include: {
       assignee: true,
