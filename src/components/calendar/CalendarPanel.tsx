@@ -534,10 +534,10 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                         >
                           {/* Top resize handle - always visible */}
                           <div 
-                            className="absolute -top-1 left-2 right-2 h-2 cursor-ns-resize bg-white/40 hover:bg-white/70 rounded z-20 flex items-center justify-center"
+                            className="absolute -top-2 left-1 right-1 h-4 cursor-ns-resize bg-violet-500/80 hover:bg-violet-400 rounded z-20 flex items-center justify-center"
                             onMouseDown={(e) => startEventResize(event, 'top', e)}
                           >
-                            <div className="w-6 h-0.5 bg-white/80 rounded" />
+                            <div className="w-8 h-1 bg-white rounded" />
                           </div>
                           
                           {/* Delete button */}
@@ -567,10 +567,10 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                           
                           {/* Bottom resize handle - always visible */}
                           <div 
-                            className="absolute -bottom-1 left-2 right-2 h-2 cursor-ns-resize bg-white/40 hover:bg-white/70 rounded z-20 flex items-center justify-center"
+                            className="absolute -bottom-2 left-1 right-1 h-4 cursor-ns-resize bg-violet-500/80 hover:bg-violet-400 rounded z-20 flex items-center justify-center"
                             onMouseDown={(e) => startEventResize(event, 'bottom', e)}
                           >
-                            <div className="w-6 h-0.5 bg-white/80 rounded" />
+                            <div className="w-8 h-1 bg-white rounded" />
                           </div>
                         </div>
                       );
