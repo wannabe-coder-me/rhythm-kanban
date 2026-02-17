@@ -37,6 +37,9 @@ import { BoardSettings } from "@/components/BoardSettings";
 import { InviteModal } from "@/components/InviteModal";
 import { KeyboardShortcutsModal, KeyboardShortcutsButton } from "@/components/KeyboardShortcutsModal";
 import { useKeyboardShortcuts, ShortcutHandler } from "@/hooks/useKeyboardShortcuts";
+import CalendarPanel from "@/components/calendar/CalendarPanel";
+import { useCalendar } from "@/components/calendar/useCalendar";
+import { Calendar } from "lucide-react";
 
 type DragType = "task" | "column";
 
@@ -68,6 +71,7 @@ function BoardPageContent() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const { toasts, addToast, dismissToast } = useToasts();
+  const { isOpen: isCalendarOpen, toggleCalendar, closeCalendar, createEventFromTask } = useCalendar();
   
   // Refs for focusing elements
   const filterInputRef = useRef<HTMLInputElement>(null);
@@ -1030,6 +1034,19 @@ function BoardPageContent() {
                 Reconnecting...
               </div>
             )}
+            {/* Calendar Toggle */}
+            <button
+              onClick={toggleCalendar}
+              className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                isCalendarOpen 
+                  ? 'bg-violet-600 text-white' 
+                  : 'text-slate-400 hover:text-white hover:bg-slate-700'
+              }`}
+              title="Toggle Calendar Panel"
+            >
+              <Calendar className="w-4 h-4" />
+              <span className="hidden sm:inline">Calendar</span>
+            </button>
             <KeyboardShortcutsButton onClick={() => setShowKeyboardShortcuts(true)} />
             <NotificationBell />
             {session.user?.image && (
@@ -1078,7 +1095,7 @@ function BoardPageContent() {
       )}
 
       {/* Board */}
-      <div className="flex-1 overflow-x-auto p-6">
+      <div className={`flex-1 overflow-x-auto p-6 transition-all duration-300 ${isCalendarOpen ? 'mr-[400px]' : ''}`}>
         <DndContext
           sensors={sensors}
           collisionDetection={rectIntersection}
@@ -1261,6 +1278,26 @@ function BoardPageContent() {
 
       {/* Toast notifications for real-time updates */}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+
+      {/* Calendar Panel */}
+      <CalendarPanel
+        isOpen={isCalendarOpen}
+        onClose={closeCalendar}
+        onEventCreate={async ({ taskId, start, end }) => {
+          if (taskId) {
+            // Find task title
+            const task = getAllTasks().find((t) => t.id === taskId);
+            if (task) {
+              try {
+                await createEventFromTask(taskId, task.title, start);
+                addToast(`Scheduled: ${task.title}`, "success");
+              } catch (error) {
+                addToast("Failed to create calendar event", "error");
+              }
+            }
+          }
+        }}
+      />
     </div>
   );
 }
