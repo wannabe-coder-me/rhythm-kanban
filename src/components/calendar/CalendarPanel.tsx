@@ -649,10 +649,19 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                           return (
                             <div
                               key={event.id}
-                              className={`absolute left-0.5 right-0.5 px-1 py-0.5 rounded text-[10px] border-l-2 overflow-hidden group cursor-pointer ${colorStyle.className || ''}`}
+                              className={`absolute left-0.5 right-0.5 rounded text-[10px] border-l-2 overflow-visible group cursor-pointer ${colorStyle.className || ''}`}
                               style={{ ...getEventStyle(event), ...colorStyle.style }}
                               title={event.title}
                             >
+                              {/* Top resize handle */}
+                              <div 
+                                className="absolute -top-1 left-0 right-0 h-2 cursor-ns-resize bg-violet-500/80 hover:bg-violet-400 rounded-t z-20 flex items-center justify-center"
+                                onMouseDown={(e) => startEventResize(event, 'top', e)}
+                              >
+                                <div className="w-4 h-0.5 bg-white rounded" />
+                              </div>
+                              
+                              {/* Delete button */}
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -660,13 +669,22 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                                     handleDeleteEvent(event.id);
                                   }
                                 }}
-                                className="absolute top-0 right-0 w-3 h-3 rounded-bl bg-red-500/80 hover:bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity z-10 flex items-center justify-center"
+                                className="absolute top-0 right-0 w-3 h-3 rounded-bl bg-red-500/80 hover:bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity z-20 flex items-center justify-center"
                               >
                                 <X className="w-2 h-2" />
                               </button>
-                              <span className="font-medium text-white truncate block pr-3">
+                              
+                              <span className="font-medium text-white truncate block px-1 pt-1 pr-4">
                                 {event.title}
                               </span>
+                              
+                              {/* Bottom resize handle */}
+                              <div 
+                                className="absolute -bottom-1 left-0 right-0 h-2 cursor-ns-resize bg-violet-500/80 hover:bg-violet-400 rounded-b z-20 flex items-center justify-center"
+                                onMouseDown={(e) => startEventResize(event, 'bottom', e)}
+                              >
+                                <div className="w-4 h-0.5 bg-white rounded" />
+                              </div>
                             </div>
                           );
                         })}
