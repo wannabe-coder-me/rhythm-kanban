@@ -46,8 +46,10 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate }: Calend
   const fetchEvents = useCallback(async () => {
     setIsLoading(true);
     try {
-      const start = viewMode === 'day' ? startOfDay(currentDate) : weekStart;
-      const end = viewMode === 'day' ? addDays(startOfDay(currentDate), 1) : addDays(weekEnd, 1);
+      const ws = startOfWeek(currentDate, { weekStartsOn: 0 });
+      const we = endOfWeek(currentDate, { weekStartsOn: 0 });
+      const start = viewMode === 'day' ? startOfDay(currentDate) : ws;
+      const end = viewMode === 'day' ? addDays(startOfDay(currentDate), 1) : addDays(we, 1);
       
       const res = await fetch(
         `/api/calendar/events?start=${start.toISOString()}&end=${end.toISOString()}`
@@ -61,7 +63,7 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate }: Calend
     } finally {
       setIsLoading(false);
     }
-  }, [currentDate, viewMode, weekStart, weekEnd]);
+  }, [currentDate, viewMode]);
 
   useEffect(() => {
     if (isOpen) {
