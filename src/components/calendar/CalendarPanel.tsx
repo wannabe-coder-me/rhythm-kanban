@@ -297,40 +297,45 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
     }
   };
 
-  const getPriorityColor = (priority?: string) => {
+  // Softer priority colors for task-linked events
+  const getPriorityColorStyle = (priority?: string): { bg: string; border: string } => {
+    // Custom soft palette: coral, amber, calm blue, sage
     switch (priority) {
-      case 'urgent': return 'bg-red-500/20 border-red-500';
-      case 'high': return 'bg-orange-500/20 border-orange-500';
-      case 'medium': return 'bg-yellow-500/20 border-yellow-500';
-      case 'low': return 'bg-green-500/20 border-green-500';
-      default: return 'bg-violet-500/20 border-violet-500';
+      case 'urgent': return { bg: 'rgba(232, 119, 119, 0.25)', border: '#e87777' }; // Soft coral
+      case 'high': return { bg: 'rgba(230, 168, 85, 0.25)', border: '#e6a855' };    // Warm amber
+      case 'medium': return { bg: 'rgba(107, 156, 212, 0.25)', border: '#6b9cd4' }; // Calm blue
+      case 'low': return { bg: 'rgba(107, 156, 122, 0.25)', border: '#6b9c7a' };    // Sage green
+      default: return { bg: 'rgba(100, 116, 139, 0.25)', border: '#64748b' };       // Soft slate
     }
   };
 
-  // Google Calendar color mapping
+  // Soft, harmonious color palette for calendar events
+  // Replaces harsh Google Calendar colors with muted, cohesive tones
   const getGoogleEventColor = (colorId?: string) => {
     const colors: Record<string, { bg: string; border: string }> = {
-      '1': { bg: 'rgba(121, 134, 203, 0.3)', border: '#7986cb' },  // Lavender
-      '2': { bg: 'rgba(51, 182, 121, 0.3)', border: '#33b679' },   // Sage
-      '3': { bg: 'rgba(142, 36, 170, 0.3)', border: '#8e24aa' },   // Grape
-      '4': { bg: 'rgba(230, 124, 115, 0.3)', border: '#e67c73' },  // Flamingo
-      '5': { bg: 'rgba(246, 192, 38, 0.3)', border: '#f6c026' },   // Banana
-      '6': { bg: 'rgba(245, 81, 29, 0.3)', border: '#f5511d' },    // Tangerine
-      '7': { bg: 'rgba(3, 155, 229, 0.3)', border: '#039be5' },    // Peacock
-      '8': { bg: 'rgba(97, 97, 97, 0.3)', border: '#616161' },     // Graphite
-      '9': { bg: 'rgba(63, 81, 181, 0.3)', border: '#3f51b5' },    // Blueberry
-      '10': { bg: 'rgba(11, 128, 67, 0.3)', border: '#0b8043' },   // Basil
-      '11': { bg: 'rgba(214, 0, 0, 0.3)', border: '#d60000' },     // Tomato
+      // Map all Google colorIds to our soft palette
+      '1': { bg: 'rgba(100, 116, 139, 0.25)', border: '#64748b' },  // Soft slate blue
+      '2': { bg: 'rgba(107, 144, 128, 0.25)', border: '#6b9080' },  // Sage
+      '3': { bg: 'rgba(190, 107, 122, 0.25)', border: '#be6b7a' },  // Muted rose
+      '4': { bg: 'rgba(190, 107, 122, 0.25)', border: '#be6b7a' },  // Muted rose
+      '5': { bg: 'rgba(212, 165, 116, 0.25)', border: '#d4a574' },  // Soft amber
+      '6': { bg: 'rgba(230, 168, 85, 0.25)', border: '#e6a855' },   // Warm amber
+      '7': { bg: 'rgba(124, 180, 196, 0.25)', border: '#7cb4c4' },  // Soft sky
+      '8': { bg: 'rgba(100, 116, 139, 0.25)', border: '#64748b' },  // Soft slate
+      '9': { bg: 'rgba(107, 156, 212, 0.25)', border: '#6b9cd4' },  // Calm blue
+      '10': { bg: 'rgba(107, 156, 122, 0.25)', border: '#6b9c7a' }, // Sage green
+      '11': { bg: 'rgba(232, 119, 119, 0.25)', border: '#e87777' }, // Soft coral
     };
-    return colors[colorId || ''] || { bg: 'rgba(3, 155, 229, 0.3)', border: '#039be5' }; // Default to Peacock blue
+    return colors[colorId || ''] || { bg: 'rgba(100, 116, 139, 0.25)', border: '#64748b' }; // Default: soft slate
   };
 
   const getEventColorStyle = (event: CalendarEvent) => {
     // If linked to a task, use task priority color
     if (event.task?.priority) {
-      return { className: getPriorityColor(event.task.priority) };
+      const color = getPriorityColorStyle(event.task.priority);
+      return { style: { backgroundColor: color.bg, borderLeftColor: color.border } };
     }
-    // Otherwise use Google Calendar color
+    // Otherwise use Google Calendar color (mapped to soft palette)
     const color = getGoogleEventColor(event.color);
     return { style: { backgroundColor: color.bg, borderLeftColor: color.border } };
   };
@@ -489,15 +494,19 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                   <div className="border-b border-white/10 p-2 bg-[#0f0f1a]/50">
                     <span className="text-[10px] text-white/40 mb-1 block">ALL DAY</span>
                     <div className="flex flex-wrap gap-1">
-                      {getAllDayEventsForDay(currentDate).map(event => (
-                        <div
-                          key={event.id}
-                          className="bg-green-500/30 border-l-2 border-green-500 px-2 py-1 rounded text-xs"
-                          title={event.title}
-                        >
-                          <span className="font-medium text-white">{event.title}</span>
-                        </div>
-                      ))}
+                      {getAllDayEventsForDay(currentDate).map(event => {
+                        const colorStyle = getEventColorStyle(event);
+                        return (
+                          <div
+                            key={event.id}
+                            className="border-l-2 px-2 py-1 rounded text-xs"
+                            style={colorStyle.style}
+                            title={event.title}
+                          >
+                            <span className="font-medium text-white">{event.title}</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -592,15 +601,19 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                     const allDayEvents = getAllDayEventsForDay(day);
                     return (
                       <div key={`allday-${day.toISOString()}`} className="flex-1 border-l border-white/5 min-h-[30px] p-0.5">
-                        {allDayEvents.map(event => (
-                          <div
-                            key={event.id}
-                            className="bg-green-500/30 border-l-2 border-green-500 px-1 py-0.5 rounded text-[9px] mb-0.5 truncate"
-                            title={event.title}
-                          >
-                            <span className="font-medium text-white">{event.title}</span>
-                          </div>
-                        ))}
+                        {allDayEvents.map(event => {
+                          const colorStyle = getEventColorStyle(event);
+                          return (
+                            <div
+                              key={event.id}
+                              className="border-l-2 px-1 py-0.5 rounded text-[9px] mb-0.5 truncate"
+                              style={colorStyle.style}
+                              title={event.title}
+                            >
+                              <span className="font-medium text-white">{event.title}</span>
+                            </div>
+                          );
+                        })}
                       </div>
                     );
                   })}

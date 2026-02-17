@@ -99,6 +99,32 @@ google-calendar.ts (Google API wrapper)
 Google Calendar API
 ```
 
+### Proposed Color Palette (Softer)
+
+Current Google Calendar colors are harsh and clash. Planned redesign:
+
+**Calendar Event Colors:**
+| Purpose        | Hex       | Name            |
+|----------------|-----------|-----------------|
+| Default        | #64748b   | Soft slate blue |
+| Alternative 1  | #be6b7a   | Muted rose      |
+| Alternative 2  | #d4a574   | Soft amber      |
+| Alternative 3  | #6b9080   | Sage            |
+| Alternative 4  | #7cb4c4   | Soft sky        |
+
+**Priority Colors:**
+| Priority | Hex       | Name        |
+|----------|-----------|-------------|
+| Urgent   | #e87777   | Soft coral  |
+| High     | #e6a855   | Warm amber  |
+| Medium   | #6b9cd4   | Calm blue   |
+| Low      | #6b9c7a   | Sage green  |
+
+**Design principles:**
+- Keep dark slate base
+- Use opacity variations instead of many hues
+- Calendar events: ~40-50% saturation
+
 ### Data Model
 ```
 CalendarConnection
