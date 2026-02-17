@@ -1096,8 +1096,8 @@ function BoardPageContent() {
 
       {/* Board */}
       <div 
-        className="flex-1 overflow-x-auto p-6 transition-all duration-300"
-        style={{ marginRight: isCalendarOpen ? `${calendarWidth}px` : 0 }}
+        className={`flex-1 overflow-x-auto p-6 ${isCalendarOpen ? '' : 'transition-all duration-300'}`}
+        style={{ marginRight: isCalendarOpen ? calendarWidth : 0 }}
       >
         <DndContext
           sensors={sensors}
