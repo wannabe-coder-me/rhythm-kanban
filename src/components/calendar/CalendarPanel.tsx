@@ -115,7 +115,8 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
 
     const handleMouseMove = (e: MouseEvent) => {
       const deltaY = e.clientY - resizingEvent.startY;
-      const deltaHours = deltaY / HOUR_HEIGHT;
+      // Use business hour height for resize calculations (most resizing happens during business hours)
+      const deltaHours = deltaY / BUSINESS_HOUR_HEIGHT;
       
       if (resizingEvent.edge === 'bottom') {
         // Extend/shrink end time

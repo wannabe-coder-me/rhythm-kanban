@@ -1229,6 +1229,27 @@ function BoardPageContent() {
               </div>
             ) : null}
           </DragOverlay>
+
+          {/* Calendar Panel - must be inside DndContext for drag-drop to work */}
+          <CalendarPanel
+            isOpen={isCalendarOpen}
+            onClose={closeCalendar}
+            initialWidth={calendarWidth}
+            onWidthChange={handleCalendarWidthChange}
+            onEventCreate={async ({ taskId, start, end }) => {
+              if (taskId) {
+                const task = getAllTasks().find((t) => t.id === taskId);
+                if (task) {
+                  try {
+                    await createEventFromTask(taskId, task.title, start);
+                    addToast(`Scheduled: ${task.title}`, "success");
+                  } catch (error) {
+                    addToast("Failed to create calendar event", "error");
+                  }
+                }
+              }
+            }}
+          />
         </DndContext>
       </div>
 
@@ -1298,28 +1319,6 @@ function BoardPageContent() {
 
       {/* Toast notifications for real-time updates */}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
-
-      {/* Calendar Panel */}
-      <CalendarPanel
-        isOpen={isCalendarOpen}
-        onClose={closeCalendar}
-        initialWidth={calendarWidth}
-        onWidthChange={handleCalendarWidthChange}
-        onEventCreate={async ({ taskId, start, end }) => {
-          if (taskId) {
-            // Find task title
-            const task = getAllTasks().find((t) => t.id === taskId);
-            if (task) {
-              try {
-                await createEventFromTask(taskId, task.title, start);
-                addToast(`Scheduled: ${task.title}`, "success");
-              } catch (error) {
-                addToast("Failed to create calendar event", "error");
-              }
-            }
-          }
-        }}
-      />
     </div>
   );
 }
