@@ -209,14 +209,16 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
     if (isOpen) {
       fetchEvents();
     }
-  }, [isOpen, fetchEvents]);
+  }, [isOpen, currentDate, viewMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Refresh events when refreshKey changes (e.g., after drag-drop creates an event)
+  const lastRefreshKey = useRef(refreshKey);
   useEffect(() => {
-    if (isOpen && refreshKey !== undefined && refreshKey > 0) {
+    if (isOpen && refreshKey !== undefined && refreshKey !== lastRefreshKey.current) {
+      lastRefreshKey.current = refreshKey;
       fetchEvents();
     }
-  }, [refreshKey, isOpen, fetchEvents]);
+  }, [refreshKey, isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleConnect = async () => {
     setIsConnecting(true);
