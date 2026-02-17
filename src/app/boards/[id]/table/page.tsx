@@ -554,7 +554,7 @@ function TableViewContent() {
                         dueDate: e.target.value ? new Date(e.target.value) : null,
                       })
                     }
-                    className="bg-transparent border-none text-xs text-slate-300 focus:outline-none cursor-pointer hover:text-white"
+                    className="bg-transparent border-none text-xs text-slate-300 focus:outline-none cursor-pointer hover:text-white [color-scheme:dark]"
                   />
                 </td>
                 <td className="px-3 py-1">
