@@ -17,7 +17,12 @@ export async function GET(
   const columns = await prisma.column.findMany({
     where: {
       boardId: id,
-      board: { members: { some: { userId: user.id } } },
+      board: {
+        OR: [
+          { ownerId: user.id },
+          { members: { some: { userId: user.id } } },
+        ],
+      },
     },
     orderBy: { position: "asc" },
     include: {
