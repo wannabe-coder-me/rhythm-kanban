@@ -1163,7 +1163,7 @@ function BoardPageContent() {
 
               {/* Add Column */}
               {showAddColumn ? (
-                <div className="flex-shrink-0 w-72 bg-slate-800/50 rounded-lg p-3">
+                <div className="w-72 min-w-[200px] shrink bg-slate-800/50 rounded-lg p-3">
                   <input
                     type="text"
                     value={newColumnName}
@@ -1200,7 +1200,7 @@ function BoardPageContent() {
               ) : (
                 <button
                   onClick={() => setShowAddColumn(true)}
-                  className="flex-shrink-0 w-72 h-12 border-2 border-dashed border-slate-700 hover:border-slate-600 rounded-lg flex items-center justify-center gap-2 text-slate-500 hover:text-slate-400 transition-colors"
+                  className="w-72 min-w-[200px] shrink h-12 border-2 border-dashed border-slate-700 hover:border-slate-600 rounded-lg flex items-center justify-center gap-2 text-slate-500 hover:text-slate-400 transition-colors"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

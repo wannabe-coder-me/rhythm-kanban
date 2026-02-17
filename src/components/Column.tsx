@@ -110,7 +110,7 @@ export function Column({
       ref={setSortableRef}
       style={style}
       className={clsx(
-        "flex-shrink-0 w-72 bg-slate-800/50 rounded-lg flex flex-col max-h-full",
+        "w-72 min-w-[200px] shrink bg-slate-800/50 rounded-lg flex flex-col max-h-full",
         isOver && "ring-2 ring-indigo-500",
         isColumnDragging && "opacity-50"
       )}
