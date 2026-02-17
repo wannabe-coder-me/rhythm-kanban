@@ -752,8 +752,16 @@ export function TaskDetailPanel({
                 type="date"
                 value={dueDate}
                 onChange={(e) => {
-                  setDueDate(e.target.value);
-                  onUpdate(task.id, { dueDate: e.target.value ? new Date(e.target.value) : null });
+                  const val = e.target.value;
+                  setDueDate(val);
+                  if (val) {
+                    // Parse as local date to avoid timezone shift
+                    const [year, month, day] = val.split('-').map(Number);
+                    const date = new Date(year, month - 1, day, 12, 0, 0);
+                    onUpdate(task.id, { dueDate: date });
+                  } else {
+                    onUpdate(task.id, { dueDate: null });
+                  }
                 }}
                 className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 [color-scheme:dark]"
               />

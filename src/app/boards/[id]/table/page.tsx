@@ -549,11 +549,16 @@ function TableViewContent() {
                   <input
                     type="date"
                     value={task.dueDate ? format(new Date(task.dueDate), "yyyy-MM-dd") : ""}
-                    onChange={(e) =>
-                      updateTask(task.id, {
-                        dueDate: e.target.value ? new Date(e.target.value) : null,
-                      })
-                    }
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val) {
+                        const [year, month, day] = val.split('-').map(Number);
+                        const date = new Date(year, month - 1, day, 12, 0, 0);
+                        updateTask(task.id, { dueDate: date });
+                      } else {
+                        updateTask(task.id, { dueDate: null });
+                      }
+                    }}
                     className="bg-transparent border-none text-xs text-slate-300 focus:outline-none cursor-pointer hover:text-white [color-scheme:dark]"
                   />
                 </td>
