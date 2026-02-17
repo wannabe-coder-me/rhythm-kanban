@@ -1266,7 +1266,7 @@ function BoardPageContent() {
             }}
             onEventDelete={async (eventId) => {
               await deleteEvent(eventId);
-              addToast("Event deleted", "success");
+              // Silent - no toast for calendar operations
             }}
             onEventCreate={async ({ taskId, title, start, end, colorId, recurrence }) => {
               try {
