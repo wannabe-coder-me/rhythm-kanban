@@ -621,7 +621,7 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                             <div className="w-8 h-1 bg-white rounded" />
                           </div>
                           
-                          {/* Delete button - 2px */}
+                          {/* Delete button - red X only */}
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -629,8 +629,8 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                                 handleDeleteEvent(event.id);
                               }
                             }}
-                            className="absolute top-0.5 right-0.5 w-[2px] h-[2px] rounded-sm bg-red-500 opacity-0 group-hover:opacity-100 transition-opacity z-20"
-                          />
+                            className="absolute top-0 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-20 text-red-500 hover:text-red-400 text-[10px] font-bold leading-none"
+                          >×</button>
                           
                           <div className="flex items-center gap-1 pr-5 px-2 pt-2">
                             <span className="text-xs font-medium text-white truncate">
@@ -744,7 +744,7 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                                 <div className="w-4 h-0.5 bg-white rounded" />
                               </div>
                               
-                              {/* Delete button - 2px */}
+                              {/* Delete button - red X only */}
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -752,8 +752,8 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                                     handleDeleteEvent(event.id);
                                   }
                                 }}
-                                className="absolute top-0 right-0 w-[2px] h-[2px] rounded-sm bg-red-500 opacity-0 group-hover:opacity-100 transition-opacity z-20"
-                              />
+                                className="absolute top-0 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-20 text-red-500 hover:text-red-400 text-[8px] font-bold leading-none"
+                              >×</button>
                               
                               <span className="font-medium text-white truncate block px-1 pt-1 pr-4">
                                 {event.title}
