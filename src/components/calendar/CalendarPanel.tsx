@@ -172,6 +172,34 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onWidthC
     }
   };
 
+  // Google Calendar color mapping
+  const getGoogleEventColor = (colorId?: string) => {
+    const colors: Record<string, { bg: string; border: string }> = {
+      '1': { bg: 'rgba(121, 134, 203, 0.3)', border: '#7986cb' },  // Lavender
+      '2': { bg: 'rgba(51, 182, 121, 0.3)', border: '#33b679' },   // Sage
+      '3': { bg: 'rgba(142, 36, 170, 0.3)', border: '#8e24aa' },   // Grape
+      '4': { bg: 'rgba(230, 124, 115, 0.3)', border: '#e67c73' },  // Flamingo
+      '5': { bg: 'rgba(246, 192, 38, 0.3)', border: '#f6c026' },   // Banana
+      '6': { bg: 'rgba(245, 81, 29, 0.3)', border: '#f5511d' },    // Tangerine
+      '7': { bg: 'rgba(3, 155, 229, 0.3)', border: '#039be5' },    // Peacock
+      '8': { bg: 'rgba(97, 97, 97, 0.3)', border: '#616161' },     // Graphite
+      '9': { bg: 'rgba(63, 81, 181, 0.3)', border: '#3f51b5' },    // Blueberry
+      '10': { bg: 'rgba(11, 128, 67, 0.3)', border: '#0b8043' },   // Basil
+      '11': { bg: 'rgba(214, 0, 0, 0.3)', border: '#d60000' },     // Tomato
+    };
+    return colors[colorId || ''] || { bg: 'rgba(3, 155, 229, 0.3)', border: '#039be5' }; // Default to Peacock blue
+  };
+
+  const getEventColorStyle = (event: CalendarEvent) => {
+    // If linked to a task, use task priority color
+    if (event.task?.priority) {
+      return { className: getPriorityColor(event.task.priority) };
+    }
+    // Otherwise use Google Calendar color
+    const color = getGoogleEventColor(event.color);
+    return { style: { backgroundColor: color.bg, borderLeftColor: color.border } };
+  };
+
   // Time slot drop target for tasks
   const TimeSlot = ({ day, hour }: { day: Date; hour: number }) => {
     const slotId = `calendar-slot-${day.toISOString()}-${hour}`;
@@ -353,25 +381,28 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onWidthC
                     ))}
                     
                     {/* Timed Events */}
-                    {getTimedEventsForDay(currentDate).map(event => (
-                      <div
-                        key={event.id}
-                        className={`absolute left-1 right-1 px-2 py-1 rounded border-l-2 ${getPriorityColor(event.task?.priority)}`}
-                        style={getEventStyle(event)}
-                      >
-                        <div className="flex items-center gap-1">
-                          <span className="text-xs font-medium text-white truncate">
-                            {event.title}
+                    {getTimedEventsForDay(currentDate).map(event => {
+                      const colorStyle = getEventColorStyle(event);
+                      return (
+                        <div
+                          key={event.id}
+                          className={`absolute left-1 right-1 px-2 py-1 rounded border-l-2 ${colorStyle.className || ''}`}
+                          style={{ ...getEventStyle(event), ...colorStyle.style }}
+                        >
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs font-medium text-white truncate">
+                              {event.title}
+                            </span>
+                            {event.task && (
+                              <Link2 className="w-3 h-3 text-violet-400 flex-shrink-0" />
+                            )}
+                          </div>
+                          <span className="text-[10px] text-white/50">
+                            {format(parseISO(event.start), 'h:mm a')}
                           </span>
-                          {event.task && (
-                            <Link2 className="w-3 h-3 text-violet-400 flex-shrink-0" />
-                          )}
                         </div>
-                        <span className="text-[10px] text-white/50">
-                          {format(parseISO(event.start), 'h:mm a')}
-                        </span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -435,18 +466,21 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onWidthC
                         ))}
                         
                         {/* Timed Events */}
-                        {getTimedEventsForDay(day).map(event => (
-                          <div
-                            key={event.id}
-                            className={`absolute left-0.5 right-0.5 px-1 py-0.5 rounded text-[10px] border-l-2 overflow-hidden ${getPriorityColor(event.task?.priority)}`}
-                            style={getEventStyle(event)}
-                            title={event.title}
-                          >
-                            <span className="font-medium text-white truncate block">
-                              {event.title}
-                            </span>
-                          </div>
-                        ))}
+                        {getTimedEventsForDay(day).map(event => {
+                          const colorStyle = getEventColorStyle(event);
+                          return (
+                            <div
+                              key={event.id}
+                              className={`absolute left-0.5 right-0.5 px-1 py-0.5 rounded text-[10px] border-l-2 overflow-hidden ${colorStyle.className || ''}`}
+                              style={{ ...getEventStyle(event), ...colorStyle.style }}
+                              title={event.title}
+                            >
+                              <span className="font-medium text-white truncate block">
+                                {event.title}
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   ))}
