@@ -393,7 +393,7 @@ function BoardPageContent() {
         start.setHours(slotData.hour, 0, 0, 0);
         try {
           await createEventFromTask(task.id, task.title, start, 1, task.priority);
-          addToast(`Scheduled: ${task.title} at ${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`, "success");
+          // Silent - no toast for calendar scheduling
           // Trigger calendar refresh
           setCalendarRefreshKey(k => k + 1);
         } catch (error) {
@@ -1259,12 +1259,9 @@ function BoardPageContent() {
                   const task = getAllTasks().find((t) => t.id === taskId);
                   if (task) {
                     await createEventFromTask(taskId, task.title, start, 1, task.priority);
-                    addToast(`Scheduled: ${task.title}`, "success");
                   }
                 } else if (title) {
                   // Creating standalone event from calendar click
-                  const { createEvent } = await import('@/components/calendar/useCalendar').then(m => ({ createEvent: null }));
-                  // Use fetch directly for standalone events
                   const res = await fetch('/api/calendar/events', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1276,7 +1273,6 @@ function BoardPageContent() {
                     }),
                   });
                   if (!res.ok) throw new Error('Failed to create event');
-                  addToast(`Created: ${title}${recurrence ? ` (${recurrence.frequency})` : ''}`, "success");
                 }
                 setCalendarRefreshKey(k => k + 1);
               } catch (error) {
