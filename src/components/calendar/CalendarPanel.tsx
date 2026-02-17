@@ -250,15 +250,18 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
   }, [draggingEvent, events, onEventUpdate]);
 
   // Handle pending task (dropped from kanban) - open create modal
+  const pendingTaskId = pendingTask?.id;
   useEffect(() => {
-    if (pendingTask) {
+    if (pendingTask && pendingTaskId) {
       setNewEventTitle(pendingTask.title);
       setNewEventData({ start: pendingTask.start, end: pendingTask.end, taskId: pendingTask.id });
       setNewEventColorId('9'); // Default blue
       setNewEventRecurrence('none');
       setShowCreateModal(true);
+      // Clear pending task after handling to prevent re-trigger
+      onPendingTaskHandled?.();
     }
-  }, [pendingTask]);
+  }, [pendingTaskId]); // Only depend on ID to prevent object reference loops
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
