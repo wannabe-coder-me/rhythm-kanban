@@ -72,7 +72,7 @@ function BoardPageContent() {
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [calendarRefreshKey, setCalendarRefreshKey] = useState(0);
   const { toasts, addToast, dismissToast } = useToasts();
-  const { isOpen: isCalendarOpen, toggleCalendar, closeCalendar, createEventFromTask, updateEvent, width: calendarWidth, handleWidthChange: handleCalendarWidthChange } = useCalendar();
+  const { isOpen: isCalendarOpen, toggleCalendar, closeCalendar, createEventFromTask, updateEvent, deleteEvent, width: calendarWidth, handleWidthChange: handleCalendarWidthChange } = useCalendar();
   
   // Refs for focusing elements
   const filterInputRef = useRef<HTMLInputElement>(null);
@@ -1247,6 +1247,10 @@ function BoardPageContent() {
               } catch (error) {
                 addToast("Failed to update event", "error");
               }
+            }}
+            onEventDelete={async (eventId) => {
+              await deleteEvent(eventId);
+              addToast("Event deleted", "success");
             }}
             onEventCreate={async ({ taskId, start, end }) => {
               if (taskId) {

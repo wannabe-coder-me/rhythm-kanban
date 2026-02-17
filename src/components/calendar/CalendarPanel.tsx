@@ -26,6 +26,7 @@ interface CalendarPanelProps {
   onClose: () => void;
   onEventCreate?: (event: { taskId?: string; start: Date; end: Date }) => void;
   onEventUpdate?: (eventId: string, updates: { start?: Date; end?: Date }) => void;
+  onEventDelete?: (eventId: string) => Promise<void>;
   onWidthChange?: (width: number) => void;
   initialWidth?: number;
   refreshKey?: number;
@@ -68,7 +69,7 @@ const MIN_WIDTH = 280;
 const MAX_WIDTH = 1200;
 const DEFAULT_WIDTH = 450;
 
-export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventUpdate, onWidthChange, initialWidth = DEFAULT_WIDTH, refreshKey }: CalendarPanelProps) {
+export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventUpdate, onEventDelete, onWidthChange, initialWidth = DEFAULT_WIDTH, refreshKey }: CalendarPanelProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('week');
   const [width, setWidth] = useState(initialWidth);
   const [isResizing, setIsResizing] = useState(false);
@@ -269,6 +270,17 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
       originalStart: parseISO(event.start),
       originalEnd: parseISO(event.end),
     });
+  };
+
+  const handleDeleteEvent = async (eventId: string) => {
+    if (onEventDelete) {
+      try {
+        await onEventDelete(eventId);
+        setEvents(prev => prev.filter(e => e.id !== eventId));
+      } catch (error) {
+        console.error('Failed to delete event:', error);
+      }
+    }
   };
 
   const getPriorityColor = (priority?: string) => {
@@ -502,16 +514,31 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                       return (
                         <div
                           key={event.id}
-                          className={`absolute left-1 right-1 px-2 py-1 rounded border-l-2 group ${colorStyle.className || ''}`}
+                          className={`absolute left-1 right-1 px-2 py-1 rounded border-l-2 group cursor-pointer ${colorStyle.className || ''}`}
                           style={{ ...getEventStyle(event), ...colorStyle.style }}
                         >
                           {/* Top resize handle */}
                           <div 
-                            className="absolute top-0 left-0 right-0 h-2 cursor-ns-resize opacity-0 group-hover:opacity-100 bg-white/20 rounded-t"
+                            className="absolute top-0 left-0 right-0 h-3 cursor-ns-resize opacity-0 group-hover:opacity-100 bg-white/30 rounded-t z-10"
                             onMouseDown={(e) => startEventResize(event, 'top', e)}
-                          />
+                          >
+                            <div className="w-8 h-1 bg-white/50 rounded mx-auto mt-1" />
+                          </div>
                           
-                          <div className="flex items-center gap-1">
+                          {/* Delete button */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm('Delete this event?')) {
+                                handleDeleteEvent(event.id);
+                              }
+                            }}
+                            className="absolute top-1 right-1 w-4 h-4 rounded bg-red-500/80 hover:bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity z-10 flex items-center justify-center"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                          
+                          <div className="flex items-center gap-1 pr-5">
                             <span className="text-xs font-medium text-white truncate">
                               {event.title}
                             </span>
@@ -525,9 +552,11 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                           
                           {/* Bottom resize handle */}
                           <div 
-                            className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize opacity-0 group-hover:opacity-100 bg-white/20 rounded-b"
+                            className="absolute bottom-0 left-0 right-0 h-3 cursor-ns-resize opacity-0 group-hover:opacity-100 bg-white/30 rounded-b z-10"
                             onMouseDown={(e) => startEventResize(event, 'bottom', e)}
-                          />
+                          >
+                            <div className="w-8 h-1 bg-white/50 rounded mx-auto mt-1" />
+                          </div>
                         </div>
                       );
                     })}
@@ -603,11 +632,22 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                           return (
                             <div
                               key={event.id}
-                              className={`absolute left-0.5 right-0.5 px-1 py-0.5 rounded text-[10px] border-l-2 overflow-hidden ${colorStyle.className || ''}`}
+                              className={`absolute left-0.5 right-0.5 px-1 py-0.5 rounded text-[10px] border-l-2 overflow-hidden group cursor-pointer ${colorStyle.className || ''}`}
                               style={{ ...getEventStyle(event), ...colorStyle.style }}
                               title={event.title}
                             >
-                              <span className="font-medium text-white truncate block">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (confirm('Delete this event?')) {
+                                    handleDeleteEvent(event.id);
+                                  }
+                                }}
+                                className="absolute top-0 right-0 w-3 h-3 rounded-bl bg-red-500/80 hover:bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity z-10 flex items-center justify-center"
+                              >
+                                <X className="w-2 h-2" />
+                              </button>
+                              <span className="font-medium text-white truncate block pr-3">
                                 {event.title}
                               </span>
                             </div>
