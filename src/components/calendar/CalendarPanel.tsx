@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { format, addDays, startOfWeek, endOfWeek, startOfDay, addHours, isSameDay, parseISO } from 'date-fns';
-import { ChevronLeft, ChevronRight, X, Calendar, Loader2, Link2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Calendar, Loader2, Link2, GripVertical } from 'lucide-react';
 
 interface CalendarEvent {
   id: string;
@@ -24,6 +24,8 @@ interface CalendarPanelProps {
   isOpen: boolean;
   onClose: () => void;
   onEventCreate?: (event: { taskId?: string; start: Date; end: Date }) => void;
+  onWidthChange?: (width: number) => void;
+  initialWidth?: number;
 }
 
 type ViewMode = 'day' | 'week';
@@ -31,8 +33,44 @@ type ViewMode = 'day' | 'week';
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const HOUR_HEIGHT = 60; // pixels per hour
 
-export default function CalendarPanel({ isOpen, onClose, onEventCreate }: CalendarPanelProps) {
+const MIN_WIDTH = 300;
+const MAX_WIDTH = 800;
+const DEFAULT_WIDTH = 450;
+
+export default function CalendarPanel({ isOpen, onClose, onEventCreate, onWidthChange, initialWidth = DEFAULT_WIDTH }: CalendarPanelProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('week');
+  const [width, setWidth] = useState(initialWidth);
+  const [isResizing, setIsResizing] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Handle resize drag
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const newWidth = window.innerWidth - e.clientX;
+      const clampedWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, newWidth));
+      setWidth(clampedWidth);
+      onWidthChange?.(clampedWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing, onWidthChange]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -150,12 +188,22 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate }: Calend
 
   return (
     <div 
-      className={`fixed right-0 top-0 h-full bg-[#0f0f1a] border-l border-white/10 shadow-2xl transition-all duration-300 z-50 ${
-        isOpen ? 'w-[400px] translate-x-0' : 'w-0 translate-x-full'
-      }`}
+      ref={panelRef}
+      style={{ width: isOpen ? `${width}px` : 0 }}
+      className={`fixed right-0 top-0 h-full bg-[#0f0f1a] border-l border-white/10 shadow-2xl z-50 ${
+        isOpen ? 'translate-x-0' : 'translate-x-full'
+      } ${isResizing ? '' : 'transition-all duration-300'}`}
     >
+      {/* Resize Handle */}
+      <div
+        onMouseDown={() => setIsResizing(true)}
+        className="absolute left-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-violet-500/30 transition-colors group flex items-center justify-center"
+      >
+        <div className="w-1 h-16 bg-white/20 rounded group-hover:bg-violet-400 transition-colors" />
+      </div>
+
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-white/10">
+      <div className="flex items-center justify-between p-4 border-b border-white/10 ml-2">
         <div className="flex items-center gap-2">
           <Calendar className="w-5 h-5 text-violet-400" />
           <h2 className="font-semibold text-white">Calendar</h2>

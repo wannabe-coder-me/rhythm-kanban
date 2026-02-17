@@ -3,6 +3,8 @@
 import { useState, useCallback } from 'react';
 import { addHours } from 'date-fns';
 
+const DEFAULT_WIDTH = 450;
+
 interface CreateEventParams {
   taskId?: string;
   title: string;
@@ -19,10 +21,12 @@ interface CreateEventParams {
 export function useCalendar() {
   const [isOpen, setIsOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [width, setWidth] = useState(DEFAULT_WIDTH);
 
   const openCalendar = useCallback(() => setIsOpen(true), []);
   const closeCalendar = useCallback(() => setIsOpen(false), []);
   const toggleCalendar = useCallback(() => setIsOpen(prev => !prev), []);
+  const handleWidthChange = useCallback((newWidth: number) => setWidth(newWidth), []);
 
   const createEvent = useCallback(async (params: CreateEventParams) => {
     setIsCreating(true);
@@ -113,9 +117,11 @@ export function useCalendar() {
   return {
     isOpen,
     isCreating,
+    width,
     openCalendar,
     closeCalendar,
     toggleCalendar,
+    handleWidthChange,
     createEvent,
     createEventFromTask,
     updateEvent,

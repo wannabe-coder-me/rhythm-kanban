@@ -71,7 +71,7 @@ function BoardPageContent() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const { toasts, addToast, dismissToast } = useToasts();
-  const { isOpen: isCalendarOpen, toggleCalendar, closeCalendar, createEventFromTask } = useCalendar();
+  const { isOpen: isCalendarOpen, toggleCalendar, closeCalendar, createEventFromTask, width: calendarWidth, handleWidthChange: handleCalendarWidthChange } = useCalendar();
   
   // Refs for focusing elements
   const filterInputRef = useRef<HTMLInputElement>(null);
@@ -1095,7 +1095,10 @@ function BoardPageContent() {
       )}
 
       {/* Board */}
-      <div className={`flex-1 overflow-x-auto p-6 transition-all duration-300 ${isCalendarOpen ? 'mr-[400px]' : ''}`}>
+      <div 
+        className="flex-1 overflow-x-auto p-6 transition-all duration-300"
+        style={{ marginRight: isCalendarOpen ? `${calendarWidth}px` : 0 }}
+      >
         <DndContext
           sensors={sensors}
           collisionDetection={rectIntersection}
@@ -1283,6 +1286,8 @@ function BoardPageContent() {
       <CalendarPanel
         isOpen={isCalendarOpen}
         onClose={closeCalendar}
+        initialWidth={calendarWidth}
+        onWidthChange={handleCalendarWidthChange}
         onEventCreate={async ({ taskId, start, end }) => {
           if (taskId) {
             // Find task title
