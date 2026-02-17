@@ -410,12 +410,12 @@ function TableViewContent() {
         <table className="w-full border-collapse">
           <thead className="bg-slate-800 border-b border-slate-600">
             <tr>
-              <th className="w-8 px-2 py-1.5 text-left">
+              <th className="w-6 px-1 py-1.5 text-left">
                 <input
                   type="checkbox"
                   checked={selectedTasks.size === sortedTasks.length && sortedTasks.length > 0}
                   onChange={toggleSelectAll}
-                  className="w-3.5 h-3.5 rounded border-slate-600 bg-slate-700 text-indigo-500 focus:ring-indigo-500 focus:ring-1"
+                  className="w-[11px] h-[11px] rounded-sm border-slate-600 bg-slate-700 text-indigo-500 focus:ring-0"
                 />
               </th>
               <th
@@ -480,12 +480,12 @@ function TableViewContent() {
                   selectedTasks.has(task.id) && "bg-indigo-500/10"
                 )}
               >
-                <td className="px-2 py-1">
+                <td className="px-1 py-1">
                   <input
                     type="checkbox"
                     checked={selectedTasks.has(task.id)}
                     onChange={() => toggleSelect(task.id)}
-                    className="w-3.5 h-3.5 rounded border-slate-600 bg-slate-700 text-indigo-500 focus:ring-indigo-500 focus:ring-1"
+                    className="w-[11px] h-[11px] rounded-sm border-slate-600 bg-slate-700 text-indigo-500 focus:ring-0"
                   />
                 </td>
                 <td className="px-3 py-1">
