@@ -88,7 +88,26 @@ export async function fetchEvents(
     orderBy: 'startTime',
   });
 
-  return response.data.items || [];
+  const events = response.data.items || [];
+  
+  // Filter out declined events
+  return events.filter(event => {
+    // If no attendees, show the event
+    if (!event.attendees || event.attendees.length === 0) {
+      return true;
+    }
+    
+    // Find the user's attendance (self=true indicates the calendar owner)
+    const selfAttendee = event.attendees.find(a => a.self === true);
+    
+    // If user is not an attendee or hasn't declined, show the event
+    if (!selfAttendee || selfAttendee.responseStatus !== 'declined') {
+      return true;
+    }
+    
+    // User declined - hide the event
+    return false;
+  });
 }
 
 // Create event in Google Calendar
