@@ -87,6 +87,12 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
   const [newEventData, setNewEventData] = useState<{ start: Date; end: Date } | null>(null);
   const [newEventTitle, setNewEventTitle] = useState('');
   const [newEventRecurrence, setNewEventRecurrence] = useState<'none' | 'daily' | 'weekly' | 'monthly'>('none');
+  
+  // Event detail modal state
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  
+  // Event drag (move) state
+  const [draggingEvent, setDraggingEvent] = useState<{ id: string; startY: number; startX: number; originalStart: Date; originalEnd: Date } | null>(null);
 
   // Handle resize drag
   useEffect(() => {
@@ -178,6 +184,50 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
       window.removeEventListener('mouseup', handleMouseUp);
     };
   }, [resizingEvent, events, onEventUpdate]);
+
+  // Handle event drag (move)
+  useEffect(() => {
+    if (!draggingEvent) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaY = e.clientY - draggingEvent.startY;
+      const deltaHours = deltaY / BUSINESS_HOUR_HEIGHT;
+      
+      // Move both start and end by the same amount
+      const newStart = new Date(draggingEvent.originalStart.getTime() + deltaHours * 60 * 60 * 1000);
+      const newEnd = new Date(draggingEvent.originalEnd.getTime() + deltaHours * 60 * 60 * 1000);
+      
+      setEvents(prev => prev.map(ev => 
+        ev.id === draggingEvent.id 
+          ? { ...ev, start: newStart.toISOString(), end: newEnd.toISOString() } 
+          : ev
+      ));
+    };
+
+    const handleMouseUp = () => {
+      const event = events.find(e => e.id === draggingEvent.id);
+      if (event && onEventUpdate) {
+        onEventUpdate(draggingEvent.id, {
+          start: parseISO(event.start),
+          end: parseISO(event.end),
+        });
+      }
+      setDraggingEvent(null);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.body.style.cursor = 'grab';
+    document.body.style.userSelect = 'none';
+    
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [draggingEvent, events, onEventUpdate]);
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
@@ -284,6 +334,25 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
       originalStart: parseISO(event.start),
       originalEnd: parseISO(event.end),
     });
+  };
+
+  const startEventDrag = (event: CalendarEvent, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDraggingEvent({
+      id: event.id,
+      startY: e.clientY,
+      startX: e.clientX,
+      originalStart: parseISO(event.start),
+      originalEnd: parseISO(event.end),
+    });
+  };
+
+  const handleEventClick = (event: CalendarEvent, e: React.MouseEvent) => {
+    e.stopPropagation();
+    // Don't open details if we were dragging
+    if (!draggingEvent && !resizingEvent) {
+      setSelectedEvent(event);
+    }
   };
 
   const handleDeleteEvent = async (eventId: string) => {
@@ -540,10 +609,12 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                       return (
                         <div
                           key={event.id}
-                          className="absolute left-1 right-1 rounded border-l-2 group cursor-pointer overflow-visible"
+                          className="absolute left-1 right-1 rounded border-l-2 group cursor-grab overflow-visible"
                           style={{ ...getEventStyle(event), ...colorStyle.style }}
+                          onMouseDown={(e) => startEventDrag(event, e)}
+                          onClick={(e) => handleEventClick(event, e)}
                         >
-                          {/* Top resize handle - always visible */}
+                          {/* Top resize handle */}
                           <div 
                             className="absolute -top-2 left-[40%] right-[40%] h-3 cursor-ns-resize bg-transparent hover:bg-white/20 z-20 flex items-center justify-center"
                             onMouseDown={(e) => startEventResize(event, 'top', e)}
@@ -551,7 +622,7 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                             <div className="w-8 h-1 bg-white rounded" />
                           </div>
                           
-                          {/* Delete button */}
+                          {/* Delete button - 2px */}
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -559,10 +630,8 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                                 handleDeleteEvent(event.id);
                               }
                             }}
-                            className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-sm bg-red-500/80 hover:bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity z-20 flex items-center justify-center"
-                          >
-                            <X className="w-1 h-1" />
-                          </button>
+                            className="absolute top-0.5 right-0.5 w-[2px] h-[2px] rounded-sm bg-red-500 opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                          />
                           
                           <div className="flex items-center gap-1 pr-5 px-2 pt-2">
                             <span className="text-xs font-medium text-white truncate">
@@ -576,7 +645,7 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                             {format(parseISO(event.start), 'h:mm a')}
                           </span>
                           
-                          {/* Bottom resize handle - always visible */}
+                          {/* Bottom resize handle */}
                           <div 
                             className="absolute -bottom-2 left-[40%] right-[40%] h-3 cursor-ns-resize bg-transparent hover:bg-white/20 z-20 flex items-center justify-center"
                             onMouseDown={(e) => startEventResize(event, 'bottom', e)}
@@ -662,9 +731,11 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                           return (
                             <div
                               key={event.id}
-                              className="absolute left-0.5 right-0.5 rounded text-[10px] border-l-2 overflow-visible group cursor-pointer"
+                              className="absolute left-0.5 right-0.5 rounded text-[10px] border-l-2 overflow-visible group cursor-grab"
                               style={{ ...getEventStyle(event), ...colorStyle.style }}
                               title={event.title}
+                              onMouseDown={(e) => startEventDrag(event, e)}
+                              onClick={(e) => handleEventClick(event, e)}
                             >
                               {/* Top resize handle */}
                               <div 
@@ -674,7 +745,7 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                                 <div className="w-4 h-0.5 bg-white rounded" />
                               </div>
                               
-                              {/* Delete button */}
+                              {/* Delete button - 2px */}
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -682,10 +753,8 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                                     handleDeleteEvent(event.id);
                                   }
                                 }}
-                                className="absolute top-0 right-0 w-1.5 h-1.5 rounded-sm bg-red-500/80 hover:bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity z-20 flex items-center justify-center"
-                              >
-                                <X className="w-1 h-1" />
-                              </button>
+                                className="absolute top-0 right-0 w-[2px] h-[2px] rounded-sm bg-red-500 opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                              />
                               
                               <span className="font-medium text-white truncate block px-1 pt-1 pr-4">
                                 {event.title}
@@ -775,6 +844,100 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                 className="flex-1 px-3 py-2 text-sm bg-violet-600 hover:bg-violet-500 disabled:bg-slate-600 disabled:text-slate-400 text-white rounded transition-colors"
               >
                 Create
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Event Detail Modal */}
+      {selectedEvent && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]" onClick={() => setSelectedEvent(null)}>
+          <div className="bg-slate-800 rounded-lg p-4 w-96 shadow-xl max-h-[80vh] overflow-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start justify-between mb-3">
+              <h3 className="text-white font-medium text-lg pr-4">{selectedEvent.title}</h3>
+              <button
+                onClick={() => setSelectedEvent(null)}
+                className="text-slate-400 hover:text-white p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="space-y-3 text-sm">
+              {/* Time */}
+              <div className="flex items-center gap-2 text-slate-300">
+                <Calendar className="w-4 h-4 text-slate-500" />
+                <span>
+                  {format(parseISO(selectedEvent.start), 'EEE, MMM d, yyyy')}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-slate-300 ml-6">
+                <span>
+                  {format(parseISO(selectedEvent.start), 'h:mm a')} - {format(parseISO(selectedEvent.end), 'h:mm a')}
+                </span>
+              </div>
+              
+              {/* Description */}
+              {selectedEvent.description && (
+                <div className="mt-4">
+                  <p className="text-xs text-slate-500 mb-1">Description</p>
+                  <p className="text-slate-300 whitespace-pre-wrap">{selectedEvent.description}</p>
+                </div>
+              )}
+              
+              {/* Linked Task */}
+              {selectedEvent.task && (
+                <div className="mt-4 p-2 bg-slate-700/50 rounded">
+                  <p className="text-xs text-slate-500 mb-1">Linked Task</p>
+                  <div className="flex items-center gap-2">
+                    <Link2 className="w-3 h-3 text-violet-400" />
+                    <span className="text-white">{selectedEvent.task.title}</span>
+                    {selectedEvent.task.priority && (
+                      <span className={`text-xs px-1.5 py-0.5 rounded ${
+                        selectedEvent.task.priority === 'urgent' ? 'bg-red-500/20 text-red-400' :
+                        selectedEvent.task.priority === 'high' ? 'bg-orange-500/20 text-orange-400' :
+                        selectedEvent.task.priority === 'medium' ? 'bg-blue-500/20 text-blue-400' :
+                        'bg-green-500/20 text-green-400'
+                      }`}>
+                        {selectedEvent.task.priority}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {/* Open in Google Calendar */}
+              {selectedEvent.htmlLink && (
+                <a
+                  href={selectedEvent.htmlLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 mt-4 text-violet-400 hover:text-violet-300 text-sm"
+                >
+                  Open in Google Calendar →
+                </a>
+              )}
+            </div>
+            
+            <div className="flex gap-2 mt-6 pt-4 border-t border-slate-700">
+              <button
+                onClick={() => {
+                  if (confirm('Delete this event?')) {
+                    handleDeleteEvent(selectedEvent.id);
+                    setSelectedEvent(null);
+                  }
+                }}
+                className="px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors"
+              >
+                Delete
+              </button>
+              <div className="flex-1" />
+              <button
+                onClick={() => setSelectedEvent(null)}
+                className="px-4 py-2 text-sm bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors"
+              >
+                Close
               </button>
             </div>
           </div>
