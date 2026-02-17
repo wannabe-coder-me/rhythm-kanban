@@ -24,7 +24,13 @@ interface CalendarEvent {
 interface CalendarPanelProps {
   isOpen: boolean;
   onClose: () => void;
-  onEventCreate?: (event: { taskId?: string; start: Date; end: Date }) => void;
+  onEventCreate?: (event: { 
+    taskId?: string; 
+    title?: string;
+    start: Date; 
+    end: Date;
+    recurrence?: { frequency: 'daily' | 'weekly' | 'monthly'; interval?: number };
+  }) => void;
   onEventUpdate?: (eventId: string, updates: { start?: Date; end?: Date }) => void;
   onEventDelete?: (eventId: string) => Promise<void>;
   onWidthChange?: (width: number) => void;
@@ -75,6 +81,12 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
   const [isResizing, setIsResizing] = useState(false);
   const [resizingEvent, setResizingEvent] = useState<{ id: string; edge: 'top' | 'bottom'; startY: number; originalStart: Date; originalEnd: Date } | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  
+  // Event creation modal state
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newEventData, setNewEventData] = useState<{ start: Date; end: Date } | null>(null);
+  const [newEventTitle, setNewEventTitle] = useState('');
+  const [newEventRecurrence, setNewEventRecurrence] = useState<'none' | 'daily' | 'weekly' | 'monthly'>('none');
 
   // Handle resize drag
   useEffect(() => {
@@ -337,7 +349,10 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
       const start = new Date(day);
       start.setHours(hour, 0, 0, 0);
       const end = addHours(start, 1);
-      onEventCreate?.({ start, end });
+      setNewEventData({ start, end });
+      setNewEventTitle('');
+      setNewEventRecurrence('none');
+      setShowCreateModal(true);
     };
 
     const height = getHourHeight(hour);
@@ -661,6 +676,76 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
             )}
           </div>
         </>
+      )}
+
+      {/* Event Creation Modal */}
+      {showCreateModal && newEventData && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]" onClick={() => setShowCreateModal(false)}>
+          <div className="bg-slate-800 rounded-lg p-4 w-80 shadow-xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-white font-medium mb-3">New Event</h3>
+            
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-slate-400 block mb-1">Title</label>
+                <input
+                  type="text"
+                  value={newEventTitle}
+                  onChange={(e) => setNewEventTitle(e.target.value)}
+                  placeholder="Event title..."
+                  className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  autoFocus
+                />
+              </div>
+              
+              <div>
+                <label className="text-xs text-slate-400 block mb-1">Time</label>
+                <p className="text-sm text-white">
+                  {format(newEventData.start, 'EEE, MMM d')} at {format(newEventData.start, 'h:mm a')} - {format(newEventData.end, 'h:mm a')}
+                </p>
+              </div>
+              
+              <div>
+                <label className="text-xs text-slate-400 block mb-1">Repeat</label>
+                <select
+                  value={newEventRecurrence}
+                  onChange={(e) => setNewEventRecurrence(e.target.value as typeof newEventRecurrence)}
+                  className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                >
+                  <option value="none">Does not repeat</option>
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+              </div>
+            </div>
+            
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="flex-1 px-3 py-2 text-sm text-slate-400 hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (newEventTitle.trim()) {
+                    onEventCreate?.({
+                      title: newEventTitle,
+                      start: newEventData.start,
+                      end: newEventData.end,
+                      recurrence: newEventRecurrence !== 'none' ? { frequency: newEventRecurrence } : undefined,
+                    });
+                    setShowCreateModal(false);
+                  }
+                }}
+                disabled={!newEventTitle.trim()}
+                className="flex-1 px-3 py-2 text-sm bg-violet-600 hover:bg-violet-500 disabled:bg-slate-600 disabled:text-slate-400 text-white rounded transition-colors"
+              >
+                Create
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

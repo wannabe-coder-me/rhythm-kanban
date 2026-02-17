@@ -1252,18 +1252,35 @@ function BoardPageContent() {
               await deleteEvent(eventId);
               addToast("Event deleted", "success");
             }}
-            onEventCreate={async ({ taskId, start, end }) => {
-              if (taskId) {
-                const task = getAllTasks().find((t) => t.id === taskId);
-                if (task) {
-                  try {
+            onEventCreate={async ({ taskId, title, start, end, recurrence }) => {
+              try {
+                if (taskId) {
+                  // Creating from a task drag-drop
+                  const task = getAllTasks().find((t) => t.id === taskId);
+                  if (task) {
                     await createEventFromTask(taskId, task.title, start, 1, task.priority);
                     addToast(`Scheduled: ${task.title}`, "success");
-                    setCalendarRefreshKey(k => k + 1);
-                  } catch (error) {
-                    addToast("Failed to create calendar event", "error");
                   }
+                } else if (title) {
+                  // Creating standalone event from calendar click
+                  const { createEvent } = await import('@/components/calendar/useCalendar').then(m => ({ createEvent: null }));
+                  // Use fetch directly for standalone events
+                  const res = await fetch('/api/calendar/events', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      title,
+                      start: start.toISOString(),
+                      end: end.toISOString(),
+                      recurrence,
+                    }),
+                  });
+                  if (!res.ok) throw new Error('Failed to create event');
+                  addToast(`Created: ${title}${recurrence ? ` (${recurrence.frequency})` : ''}`, "success");
                 }
+                setCalendarRefreshKey(k => k + 1);
+              } catch (error) {
+                addToast("Failed to create calendar event", "error");
               }
             }}
           />
