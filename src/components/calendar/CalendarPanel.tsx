@@ -364,8 +364,8 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
         ref={setNodeRef}
         onClick={handleClick}
         style={{ height: `${height}px` }}
-        className={`border-b border-white/5 transition-colors cursor-pointer ${
-          isOver ? 'bg-violet-500/30' : 'hover:bg-white/5'
+        className={`border-b border-white/5 cursor-pointer ${
+          isOver ? 'bg-violet-500/20' : ''
         }`}
       />
     );
