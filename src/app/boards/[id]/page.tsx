@@ -71,6 +71,7 @@ function BoardPageContent() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [calendarRefreshKey, setCalendarRefreshKey] = useState(0);
+  const [showArchived, setShowArchived] = useState(false);
   const { toasts, addToast, dismissToast } = useToasts();
   const { isOpen: isCalendarOpen, toggleCalendar, closeCalendar, createEventFromTask, updateEvent, deleteEvent, width: calendarWidth, handleWidthChange: handleCalendarWidthChange } = useCalendar();
   
@@ -101,7 +102,10 @@ function BoardPageContent() {
 
   const fetchBoard = useCallback(async () => {
     try {
-      const res = await fetch(`/api/boards/${boardId}`);
+      const url = showArchived 
+        ? `/api/boards/${boardId}?includeArchived=true`
+        : `/api/boards/${boardId}`;
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         setBoard(data);
@@ -114,7 +118,7 @@ function BoardPageContent() {
     } finally {
       setLoading(false);
     }
-  }, [boardId, router]);
+  }, [boardId, router, showArchived]);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -1082,7 +1086,7 @@ function BoardPageContent() {
         </div>
 
         {/* Filter Bar */}
-        <div className="px-6 pb-3">
+        <div className="px-6 pb-3 flex items-center gap-4">
           <FilterBar
             filters={filters}
             onFilterChange={updateFilters}
@@ -1091,6 +1095,19 @@ function BoardPageContent() {
             users={users}
             allLabels={allLabels}
           />
+          <button
+            onClick={() => setShowArchived(!showArchived)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors ${
+              showArchived 
+                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' 
+                : 'text-slate-400 hover:text-white hover:bg-slate-700'
+            }`}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+            </svg>
+            {showArchived ? 'Hide Archived' : 'Show Archived'}
+          </button>
         </div>
       </header>
 

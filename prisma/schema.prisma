@@ -160,6 +160,8 @@ model Task {
   startDate          DateTime?
   dueDate            DateTime?
   completed          Boolean            @default(false)
+  archived           Boolean            @default(false)
+  archivedAt         DateTime?
   assigneeId         String?
   createdById        String
   parentId           String?

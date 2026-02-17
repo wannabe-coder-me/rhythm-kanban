@@ -13,6 +13,8 @@ export async function GET(
   }
 
   const { id } = await params;
+  const { searchParams } = new URL(req.url);
+  const includeArchived = searchParams.get('includeArchived') === 'true';
 
   // Get board with owner and members
   const board = await prisma.board.findUnique({
@@ -23,7 +25,10 @@ export async function GET(
         orderBy: { position: "asc" },
         include: {
           tasks: {
-            where: { parentId: null },
+            where: { 
+              parentId: null,
+              ...(includeArchived ? {} : { archived: false }),
+            },
             orderBy: { position: "asc" },
             include: {
               assignee: true,

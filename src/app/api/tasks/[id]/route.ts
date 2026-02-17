@@ -229,6 +229,26 @@ export async function PATCH(
     );
   }
 
+  // Auto-archive when moved to Done column or marked complete
+  const targetColumn = columnId 
+    ? await prisma.column.findUnique({ where: { id: columnId } })
+    : updated.column;
+  const isDoneColumn = targetColumn?.name?.toLowerCase().includes('done') || 
+                       targetColumn?.name?.toLowerCase().includes('complete') ||
+                       targetColumn?.name?.toLowerCase().includes('finished');
+  const shouldArchive = (isDoneColumn || completed === true) && !task.archived;
+  const shouldUnarchive = completed === false && task.archived;
+
+  if (shouldArchive || shouldUnarchive) {
+    await prisma.task.update({
+      where: { id },
+      data: {
+        archived: shouldArchive,
+        archivedAt: shouldArchive ? new Date() : null,
+      },
+    });
+  }
+
   // Handle custom field values
   if (customFields && typeof customFields === "object") {
     for (const [fieldId, value] of Object.entries(customFields)) {
