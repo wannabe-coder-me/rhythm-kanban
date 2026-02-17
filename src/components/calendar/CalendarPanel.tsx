@@ -28,6 +28,7 @@ interface CalendarPanelProps {
   onEventUpdate?: (eventId: string, updates: { start?: Date; end?: Date }) => void;
   onWidthChange?: (width: number) => void;
   initialWidth?: number;
+  refreshKey?: number;
 }
 
 type ViewMode = 'day' | 'week';
@@ -67,7 +68,7 @@ const MIN_WIDTH = 280;
 const MAX_WIDTH = 1200;
 const DEFAULT_WIDTH = 450;
 
-export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventUpdate, onWidthChange, initialWidth = DEFAULT_WIDTH }: CalendarPanelProps) {
+export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventUpdate, onWidthChange, initialWidth = DEFAULT_WIDTH, refreshKey }: CalendarPanelProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('week');
   const [width, setWidth] = useState(initialWidth);
   const [isResizing, setIsResizing] = useState(false);
@@ -196,6 +197,13 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
       fetchEvents();
     }
   }, [isOpen, fetchEvents]);
+
+  // Refresh events when refreshKey changes (e.g., after drag-drop creates an event)
+  useEffect(() => {
+    if (isOpen && refreshKey !== undefined && refreshKey > 0) {
+      fetchEvents();
+    }
+  }, [refreshKey, isOpen, fetchEvents]);
 
   const handleConnect = async () => {
     setIsConnecting(true);

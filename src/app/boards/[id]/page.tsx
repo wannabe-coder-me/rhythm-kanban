@@ -70,6 +70,7 @@ function BoardPageContent() {
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [calendarRefreshKey, setCalendarRefreshKey] = useState(0);
   const { toasts, addToast, dismissToast } = useToasts();
   const { isOpen: isCalendarOpen, toggleCalendar, closeCalendar, createEventFromTask, width: calendarWidth, handleWidthChange: handleCalendarWidthChange } = useCalendar();
   
@@ -393,6 +394,8 @@ function BoardPageContent() {
         try {
           await createEventFromTask(task.id, task.title, start);
           addToast(`Scheduled: ${task.title} at ${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`, "success");
+          // Trigger calendar refresh
+          setCalendarRefreshKey(k => k + 1);
         } catch (error) {
           addToast("Failed to schedule task", "error");
         }
@@ -1236,6 +1239,7 @@ function BoardPageContent() {
             onClose={closeCalendar}
             initialWidth={calendarWidth}
             onWidthChange={handleCalendarWidthChange}
+            refreshKey={calendarRefreshKey}
             onEventCreate={async ({ taskId, start, end }) => {
               if (taskId) {
                 const task = getAllTasks().find((t) => t.id === taskId);
