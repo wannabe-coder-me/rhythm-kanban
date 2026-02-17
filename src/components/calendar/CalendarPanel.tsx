@@ -533,7 +533,7 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
       ) : (
         <>
           {/* Navigation */}
-          <div className="flex items-center justify-between p-3 border-b border-white/10">
+          <div className="flex items-center justify-between p-3 border-b border-white/10 ml-2">
             <div className="flex items-center gap-1">
               <button
                 onClick={handlePrev}
@@ -583,7 +583,7 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
           </div>
 
           {/* Calendar Grid */}
-          <div className="flex-1 overflow-auto">
+          <div className="flex-1 overflow-auto ml-2">
             {isLoading ? (
               <div className="flex items-center justify-center h-full">
                 <Loader2 className="w-6 h-6 animate-spin text-violet-400" />
