@@ -408,65 +408,65 @@ function TableViewContent() {
       {/* Table */}
       <div className="overflow-x-auto px-6 py-4">
         <table className="w-full border-collapse">
-          <thead className="bg-slate-800 border-b-2 border-slate-600">
+          <thead className="bg-slate-800 border-b border-slate-600">
             <tr>
-              <th className="w-12 px-4 py-4 text-left">
+              <th className="w-8 px-2 py-1.5 text-left">
                 <input
                   type="checkbox"
                   checked={selectedTasks.size === sortedTasks.length && sortedTasks.length > 0}
                   onChange={toggleSelectAll}
-                  className="rounded border-slate-600 bg-slate-700 text-indigo-500 focus:ring-indigo-500"
+                  className="w-3.5 h-3.5 rounded border-slate-600 bg-slate-700 text-indigo-500 focus:ring-indigo-500 focus:ring-1"
                 />
               </th>
               <th
-                className="px-4 py-3 text-left text-sm font-medium text-slate-300 cursor-pointer hover:text-white"
+                className="px-3 py-1.5 text-left text-xs font-medium text-slate-300 cursor-pointer hover:text-white"
                 onClick={() => handleSort("title")}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   Title
                   <SortIcon field="title" />
                 </div>
               </th>
               <th
-                className="px-4 py-3 text-left text-sm font-medium text-slate-300 cursor-pointer hover:text-white"
+                className="px-3 py-1.5 text-left text-xs font-medium text-slate-300 cursor-pointer hover:text-white"
                 onClick={() => handleSort("status")}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   Status
                   <SortIcon field="status" />
                 </div>
               </th>
               <th
-                className="px-4 py-3 text-left text-sm font-medium text-slate-300 cursor-pointer hover:text-white"
+                className="px-3 py-1.5 text-left text-xs font-medium text-slate-300 cursor-pointer hover:text-white"
                 onClick={() => handleSort("assignee")}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   Assignee
                   <SortIcon field="assignee" />
                 </div>
               </th>
               <th
-                className="px-4 py-3 text-left text-sm font-medium text-slate-300 cursor-pointer hover:text-white"
+                className="px-3 py-1.5 text-left text-xs font-medium text-slate-300 cursor-pointer hover:text-white"
                 onClick={() => handleSort("dueDate")}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   Due Date
                   <SortIcon field="dueDate" />
                 </div>
               </th>
               <th
-                className="px-4 py-3 text-left text-sm font-medium text-slate-300 cursor-pointer hover:text-white"
+                className="px-3 py-1.5 text-left text-xs font-medium text-slate-300 cursor-pointer hover:text-white"
                 onClick={() => handleSort("priority")}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   Priority
                   <SortIcon field="priority" />
                 </div>
               </th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+              <th className="px-3 py-1.5 text-left text-xs font-medium text-slate-300">
                 Subtasks
               </th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">
+              <th className="px-3 py-1.5 text-left text-xs font-medium text-slate-300">
                 Labels
               </th>
             </tr>
@@ -480,15 +480,15 @@ function TableViewContent() {
                   selectedTasks.has(task.id) && "bg-indigo-500/10"
                 )}
               >
-                <td className="px-4 py-3">
+                <td className="px-2 py-1">
                   <input
                     type="checkbox"
                     checked={selectedTasks.has(task.id)}
                     onChange={() => toggleSelect(task.id)}
-                    className="rounded border-slate-600 bg-slate-700 text-indigo-500 focus:ring-indigo-500"
+                    className="w-3.5 h-3.5 rounded border-slate-600 bg-slate-700 text-indigo-500 focus:ring-indigo-500 focus:ring-1"
                   />
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-3 py-1">
                   {editingCell?.taskId === task.id && editingCell?.field === "title" ? (
                     <input
                       type="text"
@@ -503,22 +503,22 @@ function TableViewContent() {
                           setEditingCell(null);
                         }
                       }}
-                      className="w-full bg-slate-700 border border-indigo-500 rounded px-2 py-1 text-white focus:outline-none"
+                      className="w-full bg-slate-700 border border-indigo-500 rounded px-1.5 py-0.5 text-sm text-white focus:outline-none"
                     />
                   ) : (
                     <span
                       onClick={() => setEditingCell({ taskId: task.id, field: "title" })}
-                      className="text-white cursor-pointer hover:text-indigo-400"
+                      className="text-sm text-white cursor-pointer hover:text-indigo-400"
                     >
                       {task.title}
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-3 py-1">
                   <select
                     value={task.columnId}
                     onChange={(e) => updateTask(task.id, { columnId: e.target.value })}
-                    className="bg-transparent border-none text-slate-300 focus:outline-none cursor-pointer hover:text-white"
+                    className="bg-transparent border-none text-xs text-slate-300 focus:outline-none cursor-pointer hover:text-white"
                   >
                     {columns.map((col) => (
                       <option key={col.id} value={col.id} className="bg-slate-700">
@@ -527,13 +527,13 @@ function TableViewContent() {
                     ))}
                   </select>
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-3 py-1">
                   <select
                     value={task.assigneeId || ""}
                     onChange={(e) =>
                       updateTask(task.id, { assigneeId: e.target.value || null })
                     }
-                    className="bg-transparent border-none text-slate-300 focus:outline-none cursor-pointer hover:text-white"
+                    className="bg-transparent border-none text-xs text-slate-300 focus:outline-none cursor-pointer hover:text-white"
                   >
                     <option value="" className="bg-slate-700">
                       Unassigned
@@ -545,7 +545,7 @@ function TableViewContent() {
                     ))}
                   </select>
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-3 py-1">
                   <input
                     type="date"
                     value={task.dueDate ? format(new Date(task.dueDate), "yyyy-MM-dd") : ""}
@@ -554,15 +554,15 @@ function TableViewContent() {
                         dueDate: e.target.value ? new Date(e.target.value) : null,
                       })
                     }
-                    className="bg-transparent border-none text-slate-300 focus:outline-none cursor-pointer hover:text-white"
+                    className="bg-transparent border-none text-xs text-slate-300 focus:outline-none cursor-pointer hover:text-white"
                   />
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-3 py-1">
                   <select
                     value={task.priority}
                     onChange={(e) => updateTask(task.id, { priority: e.target.value as Priority })}
                     className={clsx(
-                      "px-2 py-1 rounded-full text-xs font-medium capitalize cursor-pointer border-none focus:outline-none",
+                      "px-1.5 py-0.5 rounded text-[10px] font-medium capitalize cursor-pointer border-none focus:outline-none",
                       priorityColors[task.priority as Priority]
                     )}
                   >
@@ -580,11 +580,11 @@ function TableViewContent() {
                     </option>
                   </select>
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-3 py-1">
                   {task.subtasks && task.subtasks.length > 0 ? (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
                       <span className={clsx(
-                        "text-sm",
+                        "text-xs",
                         task.subtasks.filter((s: { completed: boolean }) => s.completed).length === task.subtasks.length 
                           ? "text-green-400" 
                           : "text-slate-400"
@@ -593,11 +593,11 @@ function TableViewContent() {
                       </span>
                     </div>
                   ) : (
-                    <span className="text-slate-600 text-sm">—</span>
+                    <span className="text-slate-600 text-xs">—</span>
                   )}
                 </td>
-                <td className="px-4 py-3">
-                  <div className="flex flex-wrap gap-1">
+                <td className="px-3 py-1">
+                  <div className="flex flex-wrap gap-0.5">
                     {task.labels?.map((label) => {
                       const labelName = typeof label === 'string' ? label : label.name;
                       const labelId = typeof label === 'string' ? label : label.id;
@@ -605,7 +605,7 @@ function TableViewContent() {
                       return (
                         <span
                           key={labelId}
-                          className="px-2 py-0.5 text-xs rounded-full"
+                          className="px-1.5 py-px text-[10px] rounded"
                           style={{
                             backgroundColor: `${labelColor}30`,
                             color: labelColor,
