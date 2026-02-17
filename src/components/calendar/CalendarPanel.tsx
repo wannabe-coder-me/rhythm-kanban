@@ -629,7 +629,7 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                                 handleDeleteEvent(event.id);
                               }
                             }}
-                            className="absolute top-0 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-20 text-red-500 hover:text-red-400 text-[10px] font-bold leading-none"
+                            className="absolute top-0 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-20 text-red-500 hover:text-red-400 text-[20px] font-bold leading-none"
                           >×</button>
                           
                           <div className="flex items-center gap-1 pr-5 px-2 pt-2">
@@ -752,7 +752,7 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                                     handleDeleteEvent(event.id);
                                   }
                                 }}
-                                className="absolute top-0 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-20 text-red-500 hover:text-red-400 text-[8px] font-bold leading-none"
+                                className="absolute top-0 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-20 text-red-500 hover:text-red-400 text-[16px] font-bold leading-none"
                               >×</button>
                               
                               <span className="font-medium text-white truncate block px-1 pt-1 pr-4">
