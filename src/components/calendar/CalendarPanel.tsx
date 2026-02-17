@@ -172,32 +172,40 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onWidthC
     }
   };
 
-  // Google Calendar color mapping
+  // Google Calendar color mapping - softer, more pleasing palette
   const getGoogleEventColor = (colorId?: string) => {
-    const colors: Record<string, { bg: string; border: string }> = {
-      '1': { bg: 'rgba(121, 134, 203, 0.3)', border: '#7986cb' },  // Lavender
-      '2': { bg: 'rgba(51, 182, 121, 0.3)', border: '#33b679' },   // Sage
-      '3': { bg: 'rgba(142, 36, 170, 0.3)', border: '#8e24aa' },   // Grape
-      '4': { bg: 'rgba(230, 124, 115, 0.3)', border: '#e67c73' },  // Flamingo
-      '5': { bg: 'rgba(246, 192, 38, 0.3)', border: '#f6c026' },   // Banana
-      '6': { bg: 'rgba(245, 81, 29, 0.3)', border: '#f5511d' },    // Tangerine
-      '7': { bg: 'rgba(3, 155, 229, 0.3)', border: '#039be5' },    // Peacock
-      '8': { bg: 'rgba(97, 97, 97, 0.3)', border: '#616161' },     // Graphite
-      '9': { bg: 'rgba(63, 81, 181, 0.3)', border: '#3f51b5' },    // Blueberry
-      '10': { bg: 'rgba(11, 128, 67, 0.3)', border: '#0b8043' },   // Basil
-      '11': { bg: 'rgba(214, 0, 0, 0.3)', border: '#d60000' },     // Tomato
+    const colors: Record<string, { bg: string; border: string; text: string }> = {
+      '1':  { bg: 'linear-gradient(135deg, rgba(121,134,203,0.4) 0%, rgba(121,134,203,0.25) 100%)', border: '#9fa8da', text: '#e8eaf6' },  // Lavender
+      '2':  { bg: 'linear-gradient(135deg, rgba(76,175,80,0.4) 0%, rgba(76,175,80,0.25) 100%)', border: '#81c784', text: '#e8f5e9' },     // Sage/Green
+      '3':  { bg: 'linear-gradient(135deg, rgba(156,39,176,0.4) 0%, rgba(156,39,176,0.25) 100%)', border: '#ba68c8', text: '#f3e5f5' },   // Grape/Purple
+      '4':  { bg: 'linear-gradient(135deg, rgba(239,154,154,0.5) 0%, rgba(239,154,154,0.3) 100%)', border: '#ef9a9a', text: '#ffebee' },  // Flamingo/Pink
+      '5':  { bg: 'linear-gradient(135deg, rgba(255,213,79,0.5) 0%, rgba(255,213,79,0.3) 100%)', border: '#ffd54f', text: '#fff8e1' },    // Banana/Yellow
+      '6':  { bg: 'linear-gradient(135deg, rgba(255,138,101,0.45) 0%, rgba(255,138,101,0.28) 100%)', border: '#ff8a65', text: '#fbe9e7' }, // Tangerine/Orange
+      '7':  { bg: 'linear-gradient(135deg, rgba(79,195,247,0.4) 0%, rgba(79,195,247,0.25) 100%)', border: '#4fc3f7', text: '#e1f5fe' },   // Peacock/Cyan
+      '8':  { bg: 'linear-gradient(135deg, rgba(158,158,158,0.4) 0%, rgba(158,158,158,0.25) 100%)', border: '#9e9e9e', text: '#f5f5f5' }, // Graphite/Gray
+      '9':  { bg: 'linear-gradient(135deg, rgba(92,107,192,0.4) 0%, rgba(92,107,192,0.25) 100%)', border: '#7986cb', text: '#e8eaf6' },   // Blueberry/Indigo
+      '10': { bg: 'linear-gradient(135deg, rgba(56,142,60,0.4) 0%, rgba(56,142,60,0.25) 100%)', border: '#66bb6a', text: '#e8f5e9' },     // Basil/Dark Green
+      '11': { bg: 'linear-gradient(135deg, rgba(229,115,115,0.45) 0%, rgba(229,115,115,0.28) 100%)', border: '#e57373', text: '#ffebee' }, // Tomato/Red
     };
-    return colors[colorId || ''] || { bg: 'rgba(3, 155, 229, 0.3)', border: '#039be5' }; // Default to Peacock blue
+    // Default to a nice blue
+    return colors[colorId || ''] || { bg: 'linear-gradient(135deg, rgba(79,195,247,0.4) 0%, rgba(79,195,247,0.25) 100%)', border: '#4fc3f7', text: '#e1f5fe' };
   };
 
   const getEventColorStyle = (event: CalendarEvent) => {
-    // If linked to a task, use task priority color
+    // If linked to a task, use task priority color class
     if (event.task?.priority) {
-      return { className: getPriorityColor(event.task.priority) };
+      return { className: getPriorityColor(event.task.priority), textColor: 'text-white' };
     }
     // Otherwise use Google Calendar color
     const color = getGoogleEventColor(event.color);
-    return { style: { backgroundColor: color.bg, borderLeftColor: color.border } };
+    return { 
+      style: { 
+        background: color.bg, 
+        borderLeftColor: color.border,
+        boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+      },
+      textColor: color.text,
+    };
   };
 
   // Time slot drop target for tasks
@@ -345,16 +353,21 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onWidthC
               <div className="flex flex-col h-full">
                 {/* All-day events section */}
                 {getAllDayEventsForDay(currentDate).length > 0 && (
-                  <div className="border-b border-white/10 p-2 bg-[#0f0f1a]/50">
-                    <span className="text-[10px] text-white/40 mb-1 block">ALL DAY</span>
-                    <div className="flex flex-wrap gap-1">
+                  <div className="border-b border-white/10 p-3 bg-[#0f0f1a]/50">
+                    <span className="text-[10px] text-white/40 uppercase tracking-wider mb-2 block">All Day</span>
+                    <div className="flex flex-wrap gap-2">
                       {getAllDayEventsForDay(currentDate).map(event => (
                         <div
                           key={event.id}
-                          className="bg-green-500/30 border-l-2 border-green-500 px-2 py-1 rounded text-xs"
+                          className="px-3 py-1.5 rounded-lg text-xs cursor-pointer transition-all hover:brightness-110"
+                          style={{
+                            background: 'linear-gradient(135deg, rgba(76,175,80,0.5) 0%, rgba(76,175,80,0.3) 100%)',
+                            borderLeft: '3px solid #66bb6a',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
+                          }}
                           title={event.title}
                         >
-                          <span className="font-medium text-white">{event.title}</span>
+                          <span className="font-semibold text-green-50 drop-shadow-sm">{event.title}</span>
                         </div>
                       ))}
                     </div>
@@ -386,18 +399,24 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onWidthC
                       return (
                         <div
                           key={event.id}
-                          className={`absolute left-1 right-1 px-2 py-1 rounded border-l-2 ${colorStyle.className || ''}`}
+                          className={`absolute left-1 right-1 px-2.5 py-1.5 rounded-lg border-l-[3px] backdrop-blur-sm transition-transform hover:scale-[1.02] cursor-pointer ${colorStyle.className || ''}`}
                           style={{ ...getEventStyle(event), ...colorStyle.style }}
                         >
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs font-medium text-white truncate">
+                          <div className="flex items-center gap-1.5">
+                            <span 
+                              className="text-xs font-semibold truncate drop-shadow-sm"
+                              style={{ color: colorStyle.textColor || '#fff' }}
+                            >
                               {event.title}
                             </span>
                             {event.task && (
-                              <Link2 className="w-3 h-3 text-violet-400 flex-shrink-0" />
+                              <Link2 className="w-3 h-3 text-white/70 flex-shrink-0" />
                             )}
                           </div>
-                          <span className="text-[10px] text-white/50">
+                          <span 
+                            className="text-[10px] font-medium opacity-80"
+                            style={{ color: colorStyle.textColor || '#fff' }}
+                          >
                             {format(parseISO(event.start), 'h:mm a')}
                           </span>
                         </div>
@@ -417,14 +436,19 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onWidthC
                   {weekDays.map(day => {
                     const allDayEvents = getAllDayEventsForDay(day);
                     return (
-                      <div key={`allday-${day.toISOString()}`} className="flex-1 border-l border-white/5 min-h-[30px] p-0.5">
+                      <div key={`allday-${day.toISOString()}`} className="flex-1 border-l border-white/5 min-h-[32px] p-1 flex flex-col gap-0.5">
                         {allDayEvents.map(event => (
                           <div
                             key={event.id}
-                            className="bg-green-500/30 border-l-2 border-green-500 px-1 py-0.5 rounded text-[9px] mb-0.5 truncate"
+                            className="px-1.5 py-0.5 rounded-md text-[9px] truncate cursor-pointer transition-all hover:brightness-110"
+                            style={{
+                              background: 'linear-gradient(135deg, rgba(76,175,80,0.5) 0%, rgba(76,175,80,0.3) 100%)',
+                              borderLeft: '3px solid #66bb6a',
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.15)',
+                            }}
                             title={event.title}
                           >
-                            <span className="font-medium text-white">{event.title}</span>
+                            <span className="font-semibold text-green-50 drop-shadow-sm">{event.title}</span>
                           </div>
                         ))}
                       </div>
@@ -471,11 +495,14 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onWidthC
                           return (
                             <div
                               key={event.id}
-                              className={`absolute left-0.5 right-0.5 px-1 py-0.5 rounded text-[10px] border-l-2 overflow-hidden ${colorStyle.className || ''}`}
+                              className={`absolute left-0.5 right-0.5 px-1.5 py-1 rounded-md text-[10px] border-l-[3px] overflow-hidden backdrop-blur-sm transition-all hover:brightness-110 cursor-pointer ${colorStyle.className || ''}`}
                               style={{ ...getEventStyle(event), ...colorStyle.style }}
                               title={event.title}
                             >
-                              <span className="font-medium text-white truncate block">
+                              <span 
+                                className="font-semibold truncate block drop-shadow-sm"
+                                style={{ color: colorStyle.textColor || '#fff' }}
+                              >
                                 {event.title}
                               </span>
                             </div>
