@@ -1,33 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getAuthUser } from "@/lib/mobile-auth";
 
 // GET: List all members of a board
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  const user = await getAuthUser(req);
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { id: boardId } = await params;
 
-  // Check if user is a member of this board
-  const membership = await prisma.boardMember.findUnique({
+  // Get board with members, checking user has access
+  const board = await prisma.board.findFirst({
     where: {
-      boardId_userId: { boardId, userId: session.user.id },
+      id: boardId,
+      OR: [
+        { ownerId: user.id },
+        { members: { some: { userId: user.id } } },
+      ],
     },
-  });
-
-  if (!membership) {
-    return NextResponse.json({ error: "Not a member" }, { status: 403 });
-  }
-
-  const board = await prisma.board.findUnique({
-    where: { id: boardId },
     select: {
       id: true,
       ownerId: true,
@@ -42,13 +37,13 @@ export async function GET(
             },
           },
         },
-        orderBy: { role: "asc" }, // owner first, then admin, then member
+        orderBy: { role: "asc" },
       },
     },
   });
 
   if (!board) {
-    return NextResponse.json({ error: "Board not found" }, { status: 404 });
+    return NextResponse.json({ error: "Not authorized" }, { status: 403 });
   }
 
   // Add isOwner flag to each member
@@ -65,8 +60,8 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  const user = await getAuthUser(req);
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -94,11 +89,11 @@ export async function POST(
 
   const currentMembership = await prisma.boardMember.findUnique({
     where: {
-      boardId_userId: { boardId, userId: session.user.id },
+      boardId_userId: { boardId, userId: user.id },
     },
   });
 
-  const isOwner = board.ownerId === session.user.id;
+  const isOwner = board.ownerId === user.id;
   const isAdmin = currentMembership?.role === "admin";
 
   if (!isOwner && !isAdmin) {
