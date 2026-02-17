@@ -33,8 +33,8 @@ type ViewMode = 'day' | 'week';
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const HOUR_HEIGHT = 60; // pixels per hour
 
-const MIN_WIDTH = 300;
-const MAX_WIDTH = 800;
+const MIN_WIDTH = 280;
+const MAX_WIDTH = 1200;
 const DEFAULT_WIDTH = 450;
 
 export default function CalendarPanel({ isOpen, onClose, onEventCreate, onWidthChange, initialWidth = DEFAULT_WIDTH }: CalendarPanelProps) {
