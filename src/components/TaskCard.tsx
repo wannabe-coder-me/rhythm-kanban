@@ -82,7 +82,7 @@ export function TaskCard({ task, onClick, onToggleSubtask, isSelected = false }:
           onClick();
         }}
         className={clsx(
-          "bg-slate-700 hover:bg-slate-650 border border-slate-600 rounded-lg p-3 cursor-pointer transition-all",
+          "bg-slate-700 hover:bg-slate-650 border border-slate-600 rounded-lg p-2 cursor-pointer transition-all",
           "border-l-4",
           priorityBorders[task.priority as Priority],
           isDragging && "opacity-50 shadow-2xl rotate-2",
@@ -92,18 +92,18 @@ export function TaskCard({ task, onClick, onToggleSubtask, isSelected = false }:
       >
         {/* Blocked indicator */}
         {isBlocked && (
-          <div className="flex items-center gap-1.5 text-amber-400 text-xs mb-2" title={`Blocked by ${blockedByCount} task${blockedByCount > 1 ? 's' : ''}`}>
+          <div className="flex items-center gap-1.5 text-amber-400 text-xs mb-1" title={`Blocked by ${blockedByCount} task${blockedByCount > 1 ? 's' : ''}`}>
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
             <span>Blocked by {blockedByCount} task{blockedByCount > 1 ? 's' : ''}</span>
           </div>
         )}
-        <h4 className="text-sm font-medium text-white mb-2">{task.title}</h4>
+        <h4 className="text-sm font-medium text-white mb-1">{task.title}</h4>
 
         {/* Subtasks Summary with expand toggle */}
         {hasSubtasks && (
-          <div className="mb-2">
+          <div className="mb-1">
             <button
               onClick={toggleSubtasksExpanded}
               className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-300 transition-colors w-full group"
@@ -140,7 +140,7 @@ export function TaskCard({ task, onClick, onToggleSubtask, isSelected = false }:
         )}
 
         {task.labels && task.labels.length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-2">
+          <div className="flex flex-wrap gap-1 mb-1">
             {task.labels.length <= 3 ? (
               // Show full pills for up to 3 labels
               task.labels.map((label) => (
