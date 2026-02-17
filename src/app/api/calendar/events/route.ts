@@ -76,8 +76,11 @@ export async function GET(req: NextRequest) {
 
 // POST /api/calendar/events - Create event (and optionally link to task)
 export async function POST(req: NextRequest) {
+  console.log('[Calendar] POST /api/calendar/events - Creating event');
+  
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
+    console.log('[Calendar] Unauthorized - no session');
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -91,7 +94,10 @@ export async function POST(req: NextRequest) {
     colorId 
   } = await req.json();
 
+  console.log('[Calendar] Creating event:', { title, start, end, taskId });
+
   if (!title || !start || !end) {
+    console.log('[Calendar] Missing required fields');
     return NextResponse.json({ error: 'title, start, and end required' }, { status: 400 });
   }
 
@@ -142,6 +148,7 @@ export async function POST(req: NextRequest) {
       include: { task: true },
     });
 
+    console.log('[Calendar] Event created successfully:', googleEvent.id);
     return NextResponse.json({
       event: {
         id: googleEvent.id,
@@ -154,7 +161,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Failed to create calendar event:', error);
+    console.error('[Calendar] Failed to create calendar event:', error);
     return NextResponse.json({ error: 'Failed to create event' }, { status: 500 });
   }
 }
