@@ -20,6 +20,7 @@ interface AuthUser {
 export async function getAuthUser(req: NextRequest): Promise<AuthUser | null> {
   // First try JWT token from Authorization header (mobile)
   const authHeader = req.headers.get("authorization");
+  console.log("[getAuthUser] URL:", req.nextUrl.pathname, "Method:", req.method);
   console.log("[getAuthUser] Auth header present:", !!authHeader);
   
   if (authHeader?.startsWith("Bearer ")) {
