@@ -1,7 +1,46 @@
-import { NextAuthOptions } from "next-auth";
+import { NextAuthOptions, getServerSession } from "next-auth";
+import { NextRequest } from "next/server";
 import GoogleProvider from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
+import jwt from "jsonwebtoken";
 import { prisma } from "./prisma";
+
+const JWT_SECRET = process.env.NEXTAUTH_SECRET || "fallback-secret-change-me";
+
+// Get authenticated user from either NextAuth session or JWT Bearer token
+export async function getAuthUser(req: NextRequest): Promise<{ id: string; email: string; name?: string | null } | null> {
+  // First try Bearer token (mobile app)
+  const authHeader = req.headers.get("authorization");
+  if (authHeader?.startsWith("Bearer ")) {
+    try {
+      const token = authHeader.substring(7);
+      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; email: string };
+      
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.userId },
+        select: { id: true, email: true, name: true },
+      });
+      
+      if (user) {
+        return user;
+      }
+    } catch {
+      // Token invalid, fall through to session check
+    }
+  }
+
+  // Fall back to NextAuth session (web)
+  const session = await getServerSession(authOptions);
+  if (session?.user?.id) {
+    return {
+      id: session.user.id,
+      email: session.user.email || "",
+      name: session.user.name,
+    };
+  }
+
+  return null;
+}
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as NextAuthOptions["adapter"],
