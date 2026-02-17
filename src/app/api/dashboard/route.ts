@@ -13,7 +13,7 @@ export async function GET() {
   const userId = session.user.id;
   const now = new Date();
   const today = startOfDay(now);
-  const endOfToday = endOfDay(now);
+  const _endOfToday = endOfDay(now);
   const startOfWeek = subDays(today, today.getDay());
   const endOfWeek = addDays(startOfWeek, 6);
   const thirtyDaysAgo = subDays(today, 30);

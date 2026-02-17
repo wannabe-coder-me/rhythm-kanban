@@ -294,7 +294,7 @@ export async function POST(request: NextRequest) {
 }
 
 // GET - Health check / verification for email services
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   return NextResponse.json({ 
     status: "ok",
     service: "email-to-task",

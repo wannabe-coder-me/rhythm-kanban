@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import jwt from "jsonwebtoken";
 
 const JWT_SECRET = process.env.NEXTAUTH_SECRET || "fallback-secret-change-me";
+const DEBUG_AUTH = process.env.DEBUG_AUTH === "true";
 
 interface AuthUser {
   id: string;
@@ -14,29 +15,34 @@ interface AuthUser {
   role: string;
 }
 
+function debugLog(...args: unknown[]) {
+  if (DEBUG_AUTH) {
+    console.log("[auth]", ...args);
+  }
+}
+
 /**
  * Get authenticated user from either NextAuth session or mobile JWT token
  */
 export async function getAuthUser(req: NextRequest): Promise<AuthUser | null> {
   // First try JWT token from Authorization header (mobile)
   const authHeader = req.headers.get("authorization");
-  console.log("[getAuthUser] URL:", req.nextUrl.pathname, "Method:", req.method);
-  console.log("[getAuthUser] Auth header present:", !!authHeader);
+  debugLog(req.method, req.nextUrl.pathname, "| bearer:", !!authHeader);
   
   if (authHeader?.startsWith("Bearer ")) {
     const token = authHeader.substring(7);
-    console.log("[getAuthUser] Token length:", token.length);
     try {
       const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; email: string };
-      console.log("[getAuthUser] JWT decoded, userId:", decoded.userId);
       const user = await prisma.user.findUnique({
         where: { id: decoded.userId },
         select: { id: true, email: true, name: true, image: true, role: true },
       });
-      console.log("[getAuthUser] User found:", !!user);
-      if (user) return user;
-    } catch (err) {
-      console.log("[getAuthUser] JWT verify failed:", err);
+      if (user) {
+        debugLog("jwt auth:", user.id);
+        return user;
+      }
+    } catch {
+      debugLog("jwt verify failed");
     }
   }
 
@@ -44,17 +50,19 @@ export async function getAuthUser(req: NextRequest): Promise<AuthUser | null> {
   try {
     const session = await getServerSession(authOptions);
     if (session?.user?.id) {
-      console.log("[getAuthUser] Session user:", session.user.id);
       const user = await prisma.user.findUnique({
         where: { id: session.user.id },
         select: { id: true, email: true, name: true, image: true, role: true },
       });
-      return user;
+      if (user) {
+        debugLog("session auth:", user.id);
+        return user;
+      }
     }
-  } catch (err) {
-    console.log("[getAuthUser] Session check failed:", err);
+  } catch {
+    debugLog("session check failed");
   }
 
-  console.log("[getAuthUser] No auth found");
+  debugLog("no auth");
   return null;
 }

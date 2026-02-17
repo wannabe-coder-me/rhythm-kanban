@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { parseRecurrenceRule, getNextOccurrence } from "@/lib/recurrence";
-import { startOfDay, isAfter, isBefore, addDays } from "date-fns";
+import { startOfDay, isAfter, addDays } from "date-fns";
 
 /**
  * POST /api/tasks/recurring/generate

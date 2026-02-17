@@ -95,7 +95,7 @@ export async function DELETE(
   }
 
   const member = column.board.members.find((m) => m.userId === session.user.id);
-  if (!member || member.role === "member") {
+  if (!member) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

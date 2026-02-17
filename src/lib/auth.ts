@@ -66,7 +66,7 @@ export const authOptions: NextAuthOptions = {
   },
   events: {
     // Auto-accept pending invites when user signs in
-    async signIn({ user, isNewUser }) {
+    async signIn({ user, isNewUser: _isNewUser }) {
       if (!user?.email) return;
 
       const email = user.email.toLowerCase();

@@ -4,7 +4,7 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID!;
 const BASE_URL = process.env.NEXTAUTH_URL || "https://kanban.rhythm.engineering";
 
 // GET /api/auth/mobile/login - Initiate Google OAuth for mobile
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   const state = crypto.randomUUID(); // CSRF protection
   
   const params = new URLSearchParams({

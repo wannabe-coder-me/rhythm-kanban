@@ -7,6 +7,9 @@ import { subscribe, getConnectedUsers, BoardEvent } from "@/lib/events";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+// Heartbeat interval in ms (default 30s, configurable via env)
+const SSE_HEARTBEAT_MS = parseInt(process.env.SSE_HEARTBEAT_MS || "30000", 10);
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -44,7 +47,7 @@ export async function GET(
         encoder.encode(`data: ${JSON.stringify(initialEvent)}\n\n`)
       );
 
-      // Heartbeat interval (every 30s)
+      // Heartbeat to keep connection alive
       const heartbeatInterval = setInterval(() => {
         try {
           controller.enqueue(encoder.encode(`: heartbeat\n\n`));
@@ -52,7 +55,7 @@ export async function GET(
           // Stream closed
           clearInterval(heartbeatInterval);
         }
-      }, 30000);
+      }, SSE_HEARTBEAT_MS);
 
       // Subscribe to board events
       const unsubscribe = subscribe(
