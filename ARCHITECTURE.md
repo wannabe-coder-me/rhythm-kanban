@@ -2,7 +2,9 @@
 
 ## Overview
 
-A modern Kanban board application with real-time collaboration, RBAC permissions, and team features. Built for Rhythm's internal project management.
+A modern Kanban board application with real-time collaboration, RBAC permissions, Google Calendar integration, and team features. Built for Rhythm's internal project management.
+
+**URL**: https://kanban.rhythm.engineering
 
 ## Tech Stack
 
@@ -14,6 +16,7 @@ A modern Kanban board application with real-time collaboration, RBAC permissions
 | Styling | Tailwind CSS |
 | Drag & Drop | @dnd-kit |
 | Real-time | Server-Sent Events (SSE) |
+| Calendar | Google Calendar API |
 | Deployment | Railway (auto-deploy from `main`) |
 
 ## Project Structure
@@ -24,35 +27,36 @@ rhythm-kanban/
 │   └── schema.prisma       # Database schema
 ├── public/
 │   └── uploads/            # File attachments storage
-├── scripts/
-│   └── fix-board-membership.ts  # Migration helper
 ├── src/
 │   ├── app/
 │   │   ├── admin/          # Admin panel
 │   │   ├── boards/[id]/    # Board views (kanban + table)
+│   │   │   └── table/      # Table view
 │   │   ├── invite/[token]/ # Invite acceptance
 │   │   ├── my-tasks/       # Cross-board task list
 │   │   ├── notifications/  # Notification center
 │   │   ├── api/
 │   │   │   ├── admin/      # Admin API routes
 │   │   │   ├── auth/       # NextAuth endpoints
-│   │   │   ├── boards/     # Board CRUD + labels + members + invites + events
+│   │   │   ├── boards/     # Board CRUD + labels + members + invites
+│   │   │   ├── calendar/   # Google Calendar integration
+│   │   │   │   ├── connect/    # OAuth connection
+│   │   │   │   ├── events/     # CRUD calendar events
+│   │   │   │   └── events/[id] # Single event operations
 │   │   │   ├── columns/    # Column CRUD
-│   │   │   ├── invites/    # Invite acceptance
-│   │   │   ├── my-tasks/   # User's tasks
-│   │   │   ├── notifications/ # Notifications
 │   │   │   ├── tasks/      # Task CRUD + comments + attachments
 │   │   │   └── users/      # User endpoints
 │   │   ├── login/          # Login page
 │   │   └── page.tsx        # Home (board list)
 │   ├── components/
+│   │   ├── calendar/
+│   │   │   ├── CalendarPanel.tsx   # Calendar sidebar panel
+│   │   │   └── useCalendar.ts      # Calendar hook (state + API)
 │   │   ├── BoardSettings.tsx    # Board settings modal
-│   │   ├── Column.tsx           # Kanban column
+│   │   ├── Column.tsx           # Kanban column (responsive width)
 │   │   ├── FilterBar.tsx        # Filters & search
 │   │   ├── InviteModal.tsx      # Invite members
 │   │   ├── LabelManager.tsx     # Manage board labels
-│   │   ├── LabelSelector.tsx    # Select labels for task
-│   │   ├── PresenceIndicator.tsx # Who's viewing
 │   │   ├── TaskCard.tsx         # Task card
 │   │   ├── TaskDetailPanel.tsx  # Task detail sidebar
 │   │   └── Toast.tsx            # Toast notifications
@@ -61,45 +65,78 @@ rhythm-kanban/
 │   │   └── useFilters.ts        # Filter state management
 │   ├── lib/
 │   │   ├── auth.ts              # NextAuth config
-│   │   ├── events.ts            # SSE pub/sub
-│   │   ├── label-colors.ts      # Preset label colors
-│   │   ├── notifications.ts     # Notification helpers
-│   │   ├── permissions.ts       # RBAC helpers
-│   │   └── prisma.ts            # Prisma client
+│   │   ├── google-calendar.ts   # Google Calendar API wrapper
+│   │   ├── prisma.ts            # Prisma client
+│   │   └── permissions.ts       # RBAC helpers
 │   └── types/
-│       ├── index.ts             # App types
-│       └── next-auth.d.ts       # Session type extensions
-├── .env.example
-├── railway.toml
-└── tailwind.config.ts
+│       └── index.ts             # App types
 ```
 
-## Data Model
+## Calendar Integration
+
+### Features
+- **Drag tasks to calendar**: Drag a task from kanban to a calendar time slot to schedule it
+- **Priority colors sync**: Task priority maps to Google Calendar colors
+  - Urgent → Red (colorId: 11)
+  - High → Orange (colorId: 6)
+  - Medium → Yellow (colorId: 5)
+  - Low → Green (colorId: 2)
+- **Resize events**: Drag top/bottom handles to change duration
+- **Delete events**: Hover to reveal delete button
+- **Week starts Monday**: Business-friendly week layout
+- **Variable row heights**: Business hours (6am-6pm) = 48px, off-hours = 20px
+
+### Architecture
+```
+CalendarPanel (UI)
+    ↓
+useCalendar hook (state management)
+    ↓
+/api/calendar/events (API routes)
+    ↓
+google-calendar.ts (Google API wrapper)
+    ↓
+Google Calendar API
+```
+
+### Data Model
+```
+CalendarConnection
+├── userId → User
+├── provider: 'google'
+├── accessToken, refreshToken
+├── tokenExpiry, lastSyncAt
+
+CalendarEvent
+├── calendarConnectionId
+├── externalEventId (Google event ID)
+├── taskId → Task (optional link)
+├── title, description
+├── startTime, endTime
+├── recurrence, color
+├── syncStatus
+```
+
+### DnD Integration
+- CalendarPanel must be inside DndContext for drag-drop to work
+- TimeSlot components use `useDroppable` from @dnd-kit
+- Tasks use `useDraggable` - can drop on calendar slots
+- On drop: creates Google Calendar event linked to task
+
+## Data Model (Core)
 
 ```
 User
 ├── id, email, name, image
-├── role: 'admin' | 'manager' | 'user' (system role)
+├── role: 'admin' | 'manager' | 'user'
 ├── ownedBoards, boardMembers
-├── tasksAssigned, tasksCreated
-├── comments, activities, attachments
-├── notifications
+├── calendarConnections
 
 Board
 ├── id, name, description
 ├── visibility: 'private' | 'team' | 'public'
-├── ownerId → User (owner)
-├── columns, members, labels, invites
-
-BoardMember
-├── boardId, userId
-├── role: 'admin' | 'member' | 'viewer'
-├── invitedById, invitedAt, joinedAt
-
-BoardInvite
-├── boardId, email, role, token
-├── status: 'pending' | 'accepted' | 'revoked' | 'expired'
-├── invitedById, expiresAt
+├── ownerId → User
+├── columns, members, labels
 
 Column
 ├── id, boardId, name, position, color
@@ -108,144 +145,56 @@ Column
 Task
 ├── id, columnId, title, description
 ├── position, priority, dueDate, completed
-├── assigneeId, createdById, parentId (subtasks)
-├── labels (many-to-many)
-├── comments, activities, attachments, subtasks
+├── assigneeId, createdById
+├── labels, subtasks, comments, attachments
+├── calendarEvents (linked calendar entries)
 
 Label
 ├── id, boardId, name, color
 ├── tasks (many-to-many)
-
-Attachment
-├── id, taskId, filename, url, mimeType, size
-├── uploadedById
-
-Comment / Activity
-├── Linked to Task + User
-
-Notification
-├── id, userId, type, title, message, link
-├── read, createdAt
 ```
 
-## Authentication & Authorization
-
-### System Roles
-| Role | Permissions |
-|------|-------------|
-| Admin | Full access, manage all users/boards, system settings |
-| Manager | Create boards, manage team members, view team boards |
-| User | Create personal boards, join boards when invited |
-
-### Board Roles
-| Role | Permissions |
-|------|-------------|
-| Owner | Full control, delete board, transfer ownership |
-| Admin | Edit settings, manage members, all task actions |
-| Member | Create/edit/move tasks, comment |
-| Viewer | View only, can comment |
-
-### Board Visibility
-| Type | Access |
-|------|--------|
-| Private | Invited members only |
-| Team | All authenticated users can view |
-| Public | Anyone with link (logged in) |
-
-## Key Features
+## Views
 
 ### Kanban Board (`/boards/[id]`)
-- Drag-and-drop columns and tasks (@dnd-kit)
-- Column reordering
-- Filter bar (assignee, priority, due date, labels, search)
-- Real-time updates with SSE
-- Presence indicators (who's viewing)
-
-### Subtasks (Asana-style)
-- Nested under parent tasks
-- Expand/collapse chevron
-- Progress bar (X/Y completed)
-- Checkable from board view
+- Drag-and-drop columns and tasks
+- Columns shrink (min 200px) when calendar expands
+- Filter bar with search, assignee, priority, labels
+- Calendar panel slides in from right
 
 ### Table View (`/boards/[id]/table`)
-- Spreadsheet view of all tasks
+- Compact rows (py-1 padding)
+- Small checkboxes (14px)
+- Inline editing
 - Same filters as kanban
-- Labels column
 
-### Task Details (slide-out panel)
-- Title, description, priority, due date
-- Assignee, status (column)
-- Labels (multi-select)
-- File attachments (drag-drop upload)
-- Subtasks
-- Comments & activity feed
-
-### Labels/Tags
-- Per-board labels with colors
-- 8 preset colors
-- Label manager modal
-- Filter by label
-
-### Real-time Updates
-- SSE endpoint: `/api/boards/[id]/events`
-- Events: task/column CRUD, moves, reorders
-- Presence: see who's viewing
-- Toast notifications for remote changes
-
-### Notifications
-- Bell icon with unread count
-- Triggers: assigned, mentioned, comments
-- `/notifications` page
-
-### My Tasks (`/my-tasks`)
-- All tasks assigned to user across boards
-- Grouped by due date (overdue, today, this week)
-- Quick complete/priority actions
-
-### Admin Panel (`/admin`)
-- Users tab: manage system roles, delete users
-- Boards tab: view all, transfer ownership, delete
-- System admins only
-
-### Board Settings
-- General: name, description, visibility
-- Members: list, change roles, remove
-- Invites: email or link, pending invites
-- Danger: transfer ownership, delete board
+### Calendar Panel (sidebar)
+- Week view with Monday start
+- Day view option
+- All-day events section
+- Timed events with priority colors
+- Resize handles (12px, visible on hover)
+- Delete button (red X, hover)
 
 ## API Routes
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
+| GET/POST | `/api/calendar/events` | List/create events |
+| GET/PATCH/DELETE | `/api/calendar/events/[id]` | Event CRUD |
+| POST | `/api/calendar/connect` | Start OAuth flow |
+| GET | `/api/calendar/callback` | OAuth callback |
 | GET/POST | `/api/boards` | List/create boards |
 | GET/PATCH/DELETE | `/api/boards/[id]` | Board CRUD |
-| GET/POST | `/api/boards/[id]/columns` | List/create columns |
-| PATCH | `/api/boards/[id]/columns/reorder` | Reorder columns |
-| GET/POST/PATCH/DELETE | `/api/boards/[id]/labels` | Board labels |
-| GET | `/api/boards/[id]/events` | SSE real-time stream |
-| GET/POST | `/api/boards/[id]/members` | Board members |
-| PATCH/DELETE | `/api/boards/[id]/members/[userId]` | Update/remove member |
-| GET/POST | `/api/boards/[id]/invites` | Board invites |
-| PATCH/DELETE | `/api/columns/[id]` | Column update/delete |
-| POST | `/api/columns/[id]/tasks` | Create task |
+| GET/POST | `/api/tasks` | List/create tasks |
 | GET/PATCH/DELETE | `/api/tasks/[id]` | Task CRUD |
-| POST | `/api/tasks/[id]` | Create subtask |
-| GET/POST | `/api/tasks/[id]/comments` | Task comments |
-| GET/POST/DELETE | `/api/tasks/[id]/attachments` | File attachments |
-| GET/POST | `/api/invites/[token]` | Get/accept invite |
-| GET | `/api/my-tasks` | User's tasks across boards |
-| GET/PATCH/DELETE | `/api/notifications` | User notifications |
-| GET/POST | `/api/admin/users` | Admin: list/add users |
-| PATCH/DELETE | `/api/admin/users/[id]` | Admin: update/delete user |
-| GET | `/api/admin/boards` | Admin: list all boards |
-| PATCH/DELETE | `/api/admin/boards/[id]` | Admin: update/delete board |
 
 ## Environment Variables
 
 ```bash
-DATABASE_URL=postgresql://...  # Railway PostgreSQL
-NEXTAUTH_SECRET=<openssl rand -base64 32>
-NEXTAUTH_URL=https://your-railway-url.up.railway.app
+DATABASE_URL=postgresql://...
+NEXTAUTH_SECRET=<secret>
+NEXTAUTH_URL=https://kanban.rhythm.engineering
 GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_SECRET=...
 ```
@@ -253,22 +202,19 @@ GOOGLE_CLIENT_SECRET=...
 ## Deployment
 
 - **Platform**: Railway
+- **URL**: https://kanban.rhythm.engineering
 - **Trigger**: Auto-deploy on push to `main`
-- **Build**: `prisma generate && prisma db push && next build`
-- **Start**: `next start`
+- **Database**: Railway PostgreSQL
+
+```bash
+# Deploy
+cd ~/clawd/rhythm-kanban
+git add -A && git commit -m "message" && git push origin main
+```
 
 ## Local Development
 
 ```bash
-# Install deps
 npm install
-
-# Set up .env from .env.example
-# Get DATABASE_URL from Railway
-
-# Push schema
-npx prisma db push
-
-# Run dev server
-npm run dev
+npm run dev  # http://localhost:3000
 ```
