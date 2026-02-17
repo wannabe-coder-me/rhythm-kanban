@@ -550,9 +550,9 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                                 handleDeleteEvent(event.id);
                               }
                             }}
-                            className="absolute top-1 right-1 w-4 h-4 rounded bg-red-500/80 hover:bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity z-20 flex items-center justify-center"
+                            className="absolute top-0.5 right-0.5 w-2.5 h-2.5 rounded-sm bg-red-500/80 hover:bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity z-20 flex items-center justify-center"
                           >
-                            <X className="w-3 h-3" />
+                            <X className="w-2 h-2" />
                           </button>
                           
                           <div className="flex items-center gap-1 pr-5 px-2 pt-2">
@@ -669,9 +669,9 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                                     handleDeleteEvent(event.id);
                                   }
                                 }}
-                                className="absolute top-0 right-0 w-3 h-3 rounded-bl bg-red-500/80 hover:bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity z-20 flex items-center justify-center"
+                                className="absolute top-0 right-0 w-2 h-2 rounded-sm bg-red-500/80 hover:bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity z-20 flex items-center justify-center"
                               >
-                                <X className="w-2 h-2" />
+                                <X className="w-1.5 h-1.5" />
                               </button>
                               
                               <span className="font-medium text-white truncate block px-1 pt-1 pr-4">
