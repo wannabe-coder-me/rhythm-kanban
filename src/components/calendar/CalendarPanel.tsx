@@ -536,7 +536,7 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                         >
                           {/* Top resize handle - always visible */}
                           <div 
-                            className="absolute -top-2 left-1 right-1 h-4 cursor-ns-resize bg-violet-500/80 hover:bg-violet-400 rounded z-20 flex items-center justify-center"
+                            className="absolute -top-2 left-[40%] right-[40%] h-3 cursor-ns-resize bg-violet-500/80 hover:bg-violet-400 z-20 flex items-center justify-center"
                             onMouseDown={(e) => startEventResize(event, 'top', e)}
                           >
                             <div className="w-8 h-1 bg-white rounded" />
@@ -569,7 +569,7 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                           
                           {/* Bottom resize handle - always visible */}
                           <div 
-                            className="absolute -bottom-2 left-1 right-1 h-4 cursor-ns-resize bg-violet-500/80 hover:bg-violet-400 rounded z-20 flex items-center justify-center"
+                            className="absolute -bottom-2 left-[40%] right-[40%] h-3 cursor-ns-resize bg-violet-500/80 hover:bg-violet-400 z-20 flex items-center justify-center"
                             onMouseDown={(e) => startEventResize(event, 'bottom', e)}
                           >
                             <div className="w-8 h-1 bg-white rounded" />
@@ -655,7 +655,7 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                             >
                               {/* Top resize handle */}
                               <div 
-                                className="absolute -top-1 left-0 right-0 h-2 cursor-ns-resize bg-violet-500/80 hover:bg-violet-400 rounded-t z-20 flex items-center justify-center"
+                                className="absolute -top-1 left-[40%] right-[40%] h-2 cursor-ns-resize bg-violet-500/80 hover:bg-violet-400 z-20 flex items-center justify-center"
                                 onMouseDown={(e) => startEventResize(event, 'top', e)}
                               >
                                 <div className="w-4 h-0.5 bg-white rounded" />
@@ -680,7 +680,7 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                               
                               {/* Bottom resize handle */}
                               <div 
-                                className="absolute -bottom-1 left-0 right-0 h-2 cursor-ns-resize bg-violet-500/80 hover:bg-violet-400 rounded-b z-20 flex items-center justify-center"
+                                className="absolute -bottom-1 left-[40%] right-[40%] h-2 cursor-ns-resize bg-violet-500/80 hover:bg-violet-400 z-20 flex items-center justify-center"
                                 onMouseDown={(e) => startEventResize(event, 'bottom', e)}
                               >
                                 <div className="w-4 h-0.5 bg-white rounded" />
