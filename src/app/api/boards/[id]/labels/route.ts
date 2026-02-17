@@ -1,26 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getAuthUser } from "@/lib/mobile-auth";
 
 // GET /api/boards/[id]/labels - List all labels for a board
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  const user = await getAuthUser(req);
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { id: boardId } = await params;
 
-  // Verify user is a member of the board
-  const member = await prisma.boardMember.findFirst({
-    where: { boardId, userId: session.user.id },
+  // Verify user is owner or member of the board
+  const board = await prisma.board.findFirst({
+    where: {
+      id: boardId,
+      OR: [
+        { ownerId: user.id },
+        { members: { some: { userId: user.id } } },
+      ],
+    },
   });
 
-  if (!member) {
+  if (!board) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -37,8 +42,8 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  const user = await getAuthUser(req);
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -52,12 +57,18 @@ export async function POST(
     );
   }
 
-  // Verify user is a member of the board
-  const member = await prisma.boardMember.findFirst({
-    where: { boardId, userId: session.user.id },
+  // Verify user is owner or member of the board
+  const board = await prisma.board.findFirst({
+    where: {
+      id: boardId,
+      OR: [
+        { ownerId: user.id },
+        { members: { some: { userId: user.id } } },
+      ],
+    },
   });
 
-  if (!member) {
+  if (!board) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -89,8 +100,8 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  const user = await getAuthUser(req);
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -101,12 +112,18 @@ export async function PATCH(
     return NextResponse.json({ error: "Label ID is required" }, { status: 400 });
   }
 
-  // Verify user is a member of the board
-  const member = await prisma.boardMember.findFirst({
-    where: { boardId, userId: session.user.id },
+  // Verify user is owner or member of the board
+  const board = await prisma.board.findFirst({
+    where: {
+      id: boardId,
+      OR: [
+        { ownerId: user.id },
+        { members: { some: { userId: user.id } } },
+      ],
+    },
   });
 
-  if (!member) {
+  if (!board) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -149,8 +166,8 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  const user = await getAuthUser(req);
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -162,12 +179,18 @@ export async function DELETE(
     return NextResponse.json({ error: "Label ID is required" }, { status: 400 });
   }
 
-  // Verify user is a member of the board
-  const member = await prisma.boardMember.findFirst({
-    where: { boardId, userId: session.user.id },
+  // Verify user is owner or member of the board
+  const board = await prisma.board.findFirst({
+    where: {
+      id: boardId,
+      OR: [
+        { ownerId: user.id },
+        { members: { some: { userId: user.id } } },
+      ],
+    },
   });
 
-  if (!member) {
+  if (!board) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

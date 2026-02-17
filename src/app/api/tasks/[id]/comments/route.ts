@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getAuthUser } from "@/lib/mobile-auth";
 import { notifyComment, notifyMentioned, parseMentions } from "@/lib/notifications";
 import { createAndEmitActivity } from "@/lib/activity";
 
@@ -9,8 +8,8 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  const user = await getAuthUser(req);
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -21,7 +20,12 @@ export async function GET(
       taskId: id,
       task: {
         column: {
-          board: { members: { some: { userId: session.user.id } } },
+          board: {
+            OR: [
+              { ownerId: user.id },
+              { members: { some: { userId: user.id } } },
+            ],
+          },
         },
       },
     },
@@ -36,8 +40,8 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  const user = await getAuthUser(req);
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -59,32 +63,33 @@ export async function POST(
     return NextResponse.json({ error: "Task not found" }, { status: 404 });
   }
 
-  const isMember = task.column.board.members.some((m) => m.userId === session.user.id);
-  if (!isMember) {
+  const isOwner = task.column.board.ownerId === user.id;
+  const isMember = task.column.board.members.some((m) => m.userId === user.id);
+  if (!isOwner && !isMember) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const comment = await prisma.comment.create({
     data: {
       taskId: id,
-      userId: session.user.id,
+      userId: user.id,
       content: content.trim(),
     },
     include: { user: true },
   });
 
   // Create activity and emit to subscribers
-  await createAndEmitActivity(id, session.user.id, "commented", { preview: content.substring(0, 50) });
+  await createAndEmitActivity(id, user.id, "commented", { preview: content.substring(0, 50) });
 
   // Get current user's name for notifications
   const currentUser = await prisma.user.findUnique({
-    where: { id: session.user.id },
+    where: { id: user.id },
     select: { name: true },
   });
   const commenterName = currentUser?.name || "Someone";
 
   // Notify task creator (if not the commenter)
-  if (task.createdById && task.createdById !== session.user.id) {
+  if (task.createdById && task.createdById !== user.id) {
     await notifyComment(
       task.createdById,
       task.title,
@@ -98,7 +103,7 @@ export async function POST(
   // Notify assignee (if different from creator and commenter)
   if (
     task.assigneeId &&
-    task.assigneeId !== session.user.id &&
+    task.assigneeId !== user.id &&
     task.assigneeId !== task.createdById
   ) {
     await notifyComment(
@@ -116,7 +121,7 @@ export async function POST(
   for (const mentionedUserId of mentionedUserIds) {
     // Don't notify if already notified as creator/assignee or is the commenter
     if (
-      mentionedUserId !== session.user.id &&
+      mentionedUserId !== user.id &&
       mentionedUserId !== task.createdById &&
       mentionedUserId !== task.assigneeId
     ) {
