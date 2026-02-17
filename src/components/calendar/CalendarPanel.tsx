@@ -138,12 +138,17 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onWidthC
     setCurrentDate(new Date());
   };
 
-  const getEventsForDay = (day: Date) => {
+  const getEventsForDay = (day: Date, allDayOnly = false) => {
     return events.filter(event => {
       const eventStart = parseISO(event.start);
-      return isSameDay(eventStart, day);
+      const isAllDay = event.allDay || !event.start.includes('T');
+      if (allDayOnly) return isSameDay(eventStart, day) && isAllDay;
+      return isSameDay(eventStart, day) && !isAllDay;
     });
   };
+
+  const getAllDayEventsForDay = (day: Date) => getEventsForDay(day, true);
+  const getTimedEventsForDay = (day: Date) => getEventsForDay(day, false);
 
   const getEventStyle = (event: CalendarEvent) => {
     const start = parseISO(event.start);
@@ -309,96 +314,143 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onWidthC
               </div>
             ) : viewMode === 'day' ? (
               /* Day View */
-              <div className="relative">
-                {/* Time labels */}
-                <div className="absolute left-0 top-0 w-12 bg-[#0f0f1a] z-10">
-                  {HOURS.map(hour => (
-                    <div key={hour} className="h-[60px] flex items-start justify-end pr-2 pt-1">
-                      <span className="text-[10px] text-white/40">
-                        {hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                
-                {/* Time slots */}
-                <div className="ml-12 relative">
-                  {HOURS.map(hour => (
-                    <TimeSlot key={hour} day={currentDate} hour={hour} />
-                  ))}
-                  
-                  {/* Events */}
-                  {getEventsForDay(currentDate).map(event => (
-                    <div
-                      key={event.id}
-                      className={`absolute left-1 right-1 px-2 py-1 rounded border-l-2 ${getPriorityColor(event.task?.priority)}`}
-                      style={getEventStyle(event)}
-                    >
-                      <div className="flex items-center gap-1">
-                        <span className="text-xs font-medium text-white truncate">
-                          {event.title}
-                        </span>
-                        {event.task && (
-                          <Link2 className="w-3 h-3 text-violet-400 flex-shrink-0" />
-                        )}
-                      </div>
-                      <span className="text-[10px] text-white/50">
-                        {format(parseISO(event.start), 'h:mm a')}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              /* Week View */
-              <div className="flex">
-                {/* Time labels */}
-                <div className="w-10 flex-shrink-0 bg-[#0f0f1a]">
-                  <div className="h-8" /> {/* Header spacer */}
-                  {HOURS.map(hour => (
-                    <div key={hour} className="h-[60px] flex items-start justify-end pr-1 pt-1">
-                      <span className="text-[9px] text-white/40">
-                        {hour === 0 ? '12a' : hour < 12 ? `${hour}a` : hour === 12 ? '12p' : `${hour - 12}p`}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Days */}
-                {weekDays.map(day => (
-                  <div key={day.toISOString()} className="flex-1 border-l border-white/5">
-                    {/* Day header */}
-                    <div className={`h-8 flex flex-col items-center justify-center border-b border-white/10 ${
-                      isSameDay(day, new Date()) ? 'bg-violet-600/20' : ''
-                    }`}>
-                      <span className="text-[10px] text-white/50">{format(day, 'EEE')}</span>
-                      <span className={`text-xs font-medium ${
-                        isSameDay(day, new Date()) ? 'text-violet-400' : 'text-white/70'
-                      }`}>{format(day, 'd')}</span>
-                    </div>
-                    
-                    {/* Time slots */}
-                    <div className="relative">
-                      {HOURS.map(hour => (
-                        <TimeSlot key={hour} day={day} hour={hour} />
-                      ))}
-                      
-                      {/* Events */}
-                      {getEventsForDay(day).map(event => (
+              <div className="flex flex-col h-full">
+                {/* All-day events section */}
+                {getAllDayEventsForDay(currentDate).length > 0 && (
+                  <div className="border-b border-white/10 p-2 bg-[#0f0f1a]/50">
+                    <span className="text-[10px] text-white/40 mb-1 block">ALL DAY</span>
+                    <div className="flex flex-wrap gap-1">
+                      {getAllDayEventsForDay(currentDate).map(event => (
                         <div
                           key={event.id}
-                          className={`absolute left-0.5 right-0.5 px-1 py-0.5 rounded text-[10px] border-l-2 overflow-hidden ${getPriorityColor(event.task?.priority)}`}
-                          style={getEventStyle(event)}
+                          className="bg-green-500/30 border-l-2 border-green-500 px-2 py-1 rounded text-xs"
                           title={event.title}
                         >
-                          <span className="font-medium text-white truncate block">
-                            {event.title}
-                          </span>
+                          <span className="font-medium text-white">{event.title}</span>
                         </div>
                       ))}
                     </div>
                   </div>
-                ))}
+                )}
+
+                {/* Time grid */}
+                <div className="relative flex-1 overflow-auto">
+                  {/* Time labels */}
+                  <div className="absolute left-0 top-0 w-12 bg-[#0f0f1a] z-10">
+                    {HOURS.map(hour => (
+                      <div key={hour} className="h-[60px] flex items-start justify-end pr-2 pt-1">
+                        <span className="text-[10px] text-white/40">
+                          {hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Time slots */}
+                  <div className="ml-12 relative">
+                    {HOURS.map(hour => (
+                      <TimeSlot key={hour} day={currentDate} hour={hour} />
+                    ))}
+                    
+                    {/* Timed Events */}
+                    {getTimedEventsForDay(currentDate).map(event => (
+                      <div
+                        key={event.id}
+                        className={`absolute left-1 right-1 px-2 py-1 rounded border-l-2 ${getPriorityColor(event.task?.priority)}`}
+                        style={getEventStyle(event)}
+                      >
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs font-medium text-white truncate">
+                            {event.title}
+                          </span>
+                          {event.task && (
+                            <Link2 className="w-3 h-3 text-violet-400 flex-shrink-0" />
+                          )}
+                        </div>
+                        <span className="text-[10px] text-white/50">
+                          {format(parseISO(event.start), 'h:mm a')}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* Week View */
+              <div className="flex flex-col">
+                {/* All-day events row */}
+                <div className="flex border-b border-white/10">
+                  <div className="w-10 flex-shrink-0 bg-[#0f0f1a] flex items-center justify-end pr-1">
+                    <span className="text-[8px] text-white/40">ALL</span>
+                  </div>
+                  {weekDays.map(day => {
+                    const allDayEvents = getAllDayEventsForDay(day);
+                    return (
+                      <div key={`allday-${day.toISOString()}`} className="flex-1 border-l border-white/5 min-h-[30px] p-0.5">
+                        {allDayEvents.map(event => (
+                          <div
+                            key={event.id}
+                            className="bg-green-500/30 border-l-2 border-green-500 px-1 py-0.5 rounded text-[9px] mb-0.5 truncate"
+                            title={event.title}
+                          >
+                            <span className="font-medium text-white">{event.title}</span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Time grid */}
+                <div className="flex flex-1 overflow-auto">
+                  {/* Time labels */}
+                  <div className="w-10 flex-shrink-0 bg-[#0f0f1a]">
+                    <div className="h-8" /> {/* Header spacer */}
+                    {HOURS.map(hour => (
+                      <div key={hour} className="h-[60px] flex items-start justify-end pr-1 pt-1">
+                        <span className="text-[9px] text-white/40">
+                          {hour === 0 ? '12a' : hour < 12 ? `${hour}a` : hour === 12 ? '12p' : `${hour - 12}p`}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Days */}
+                  {weekDays.map(day => (
+                    <div key={day.toISOString()} className="flex-1 border-l border-white/5">
+                      {/* Day header */}
+                      <div className={`h-8 flex flex-col items-center justify-center border-b border-white/10 ${
+                        isSameDay(day, new Date()) ? 'bg-violet-600/20' : ''
+                      }`}>
+                        <span className="text-[10px] text-white/50">{format(day, 'EEE')}</span>
+                        <span className={`text-xs font-medium ${
+                          isSameDay(day, new Date()) ? 'text-violet-400' : 'text-white/70'
+                        }`}>{format(day, 'd')}</span>
+                      </div>
+                      
+                      {/* Time slots */}
+                      <div className="relative">
+                        {HOURS.map(hour => (
+                          <TimeSlot key={hour} day={day} hour={hour} />
+                        ))}
+                        
+                        {/* Timed Events */}
+                        {getTimedEventsForDay(day).map(event => (
+                          <div
+                            key={event.id}
+                            className={`absolute left-0.5 right-0.5 px-1 py-0.5 rounded text-[10px] border-l-2 overflow-hidden ${getPriorityColor(event.task?.priority)}`}
+                            style={getEventStyle(event)}
+                            title={event.title}
+                          >
+                            <span className="font-medium text-white truncate block">
+                              {event.title}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
