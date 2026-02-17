@@ -12,13 +12,13 @@ export async function GET(req: NextRequest) {
   if (error) {
     console.error('Google OAuth error:', error);
     return NextResponse.redirect(
-      `${process.env.NEXTAUTH_URL}/settings?error=calendar_denied`
+      `${process.env.NEXTAUTH_URL}/dashboard?calendar=denied`
     );
   }
 
   if (!code || !state) {
     return NextResponse.redirect(
-      `${process.env.NEXTAUTH_URL}/settings?error=invalid_request`
+      `${process.env.NEXTAUTH_URL}/dashboard?calendar=invalid`
     );
   }
 
@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     // Check state is not too old (5 minutes)
     if (Date.now() - timestamp > 5 * 60 * 1000) {
       return NextResponse.redirect(
-        `${process.env.NEXTAUTH_URL}/settings?error=expired`
+        `${process.env.NEXTAUTH_URL}/dashboard?calendar=expired`
       );
     }
 
@@ -75,12 +75,12 @@ export async function GET(req: NextRequest) {
     });
 
     return NextResponse.redirect(
-      `${process.env.NEXTAUTH_URL}/settings?success=calendar_connected`
+      `${process.env.NEXTAUTH_URL}/dashboard?calendar=connected`
     );
   } catch (error) {
     console.error('Calendar connection error:', error);
     return NextResponse.redirect(
-      `${process.env.NEXTAUTH_URL}/settings?error=connection_failed`
+      `${process.env.NEXTAUTH_URL}/dashboard?calendar=error`
     );
   }
 }
