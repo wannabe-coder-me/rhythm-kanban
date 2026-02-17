@@ -379,23 +379,22 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
   };
 
   // Soft, harmonious color palette for calendar events
-  // Replaces harsh Google Calendar colors with muted, cohesive tones
+  // Diverse hues at similar saturation (~45%) for visual distinction
   const getGoogleEventColor = (colorId?: string) => {
     const colors: Record<string, { bg: string; border: string }> = {
-      // Map all Google colorIds to our soft palette
-      '1': { bg: 'rgba(100, 116, 139, 0.25)', border: '#64748b' },  // Soft slate blue
-      '2': { bg: 'rgba(107, 144, 128, 0.25)', border: '#6b9080' },  // Sage
-      '3': { bg: 'rgba(190, 107, 122, 0.25)', border: '#be6b7a' },  // Muted rose
-      '4': { bg: 'rgba(190, 107, 122, 0.25)', border: '#be6b7a' },  // Muted rose
-      '5': { bg: 'rgba(212, 165, 116, 0.25)', border: '#d4a574' },  // Soft amber
-      '6': { bg: 'rgba(230, 168, 85, 0.25)', border: '#e6a855' },   // Warm amber
-      '7': { bg: 'rgba(124, 180, 196, 0.25)', border: '#7cb4c4' },  // Soft sky
-      '8': { bg: 'rgba(100, 116, 139, 0.25)', border: '#64748b' },  // Soft slate
-      '9': { bg: 'rgba(107, 156, 212, 0.25)', border: '#6b9cd4' },  // Calm blue
-      '10': { bg: 'rgba(107, 156, 122, 0.25)', border: '#6b9c7a' }, // Sage green
-      '11': { bg: 'rgba(232, 119, 119, 0.25)', border: '#e87777' }, // Soft coral
+      '1': { bg: 'rgba(147, 130, 180, 0.28)', border: '#9382b4' },  // Lavender
+      '2': { bg: 'rgba(107, 156, 122, 0.28)', border: '#6b9c7a' },  // Sage green
+      '3': { bg: 'rgba(180, 130, 156, 0.28)', border: '#b4829c' },  // Dusty mauve
+      '4': { bg: 'rgba(200, 140, 140, 0.28)', border: '#c88c8c' },  // Dusty rose
+      '5': { bg: 'rgba(212, 175, 116, 0.28)', border: '#d4af74' },  // Soft amber
+      '6': { bg: 'rgba(210, 150, 100, 0.28)', border: '#d29664' },  // Warm terracotta
+      '7': { bg: 'rgba(100, 170, 180, 0.28)', border: '#64aab4' },  // Soft teal
+      '8': { bg: 'rgba(140, 140, 156, 0.28)', border: '#8c8c9c' },  // Cool gray
+      '9': { bg: 'rgba(120, 150, 190, 0.28)', border: '#7896be' },  // Soft blue
+      '10': { bg: 'rgba(130, 175, 140, 0.28)', border: '#82af8c' }, // Mint
+      '11': { bg: 'rgba(200, 120, 120, 0.28)', border: '#c87878' }, // Soft coral
     };
-    return colors[colorId || ''] || { bg: 'rgba(100, 116, 139, 0.25)', border: '#64748b' }; // Default: soft slate
+    return colors[colorId || ''] || { bg: 'rgba(120, 150, 190, 0.28)', border: '#7896be' }; // Default: soft blue
   };
 
   const getEventColorStyle = (event: CalendarEvent) => {
