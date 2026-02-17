@@ -379,22 +379,22 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
   };
 
   // Soft, harmonious color palette for calendar events
-  // Diverse hues at similar saturation (~45%) for visual distinction
+  // Wide hue spread for clear visual distinction
   const getGoogleEventColor = (colorId?: string) => {
     const colors: Record<string, { bg: string; border: string }> = {
-      '1': { bg: 'rgba(147, 130, 180, 0.28)', border: '#9382b4' },  // Lavender
-      '2': { bg: 'rgba(107, 156, 122, 0.28)', border: '#6b9c7a' },  // Sage green
-      '3': { bg: 'rgba(180, 130, 156, 0.28)', border: '#b4829c' },  // Dusty mauve
-      '4': { bg: 'rgba(200, 140, 140, 0.28)', border: '#c88c8c' },  // Dusty rose
-      '5': { bg: 'rgba(212, 175, 116, 0.28)', border: '#d4af74' },  // Soft amber
-      '6': { bg: 'rgba(210, 150, 100, 0.28)', border: '#d29664' },  // Warm terracotta
-      '7': { bg: 'rgba(100, 170, 180, 0.28)', border: '#64aab4' },  // Soft teal
-      '8': { bg: 'rgba(140, 140, 156, 0.28)', border: '#8c8c9c' },  // Cool gray
-      '9': { bg: 'rgba(120, 150, 190, 0.28)', border: '#7896be' },  // Soft blue
-      '10': { bg: 'rgba(130, 175, 140, 0.28)', border: '#82af8c' }, // Mint
-      '11': { bg: 'rgba(200, 120, 120, 0.28)', border: '#c87878' }, // Soft coral
+      '1': { bg: 'rgba(156, 120, 180, 0.30)', border: '#9c78b4' },  // Purple
+      '2': { bg: 'rgba(80, 160, 100, 0.30)', border: '#50a064' },   // Green
+      '3': { bg: 'rgba(200, 100, 130, 0.30)', border: '#c86482' },  // Rose pink
+      '4': { bg: 'rgba(220, 160, 100, 0.30)', border: '#dca064' },  // Orange
+      '5': { bg: 'rgba(200, 180, 80, 0.30)', border: '#c8b450' },   // Gold
+      '6': { bg: 'rgba(180, 100, 80, 0.30)', border: '#b46450' },   // Rust
+      '7': { bg: 'rgba(80, 180, 180, 0.30)', border: '#50b4b4' },   // Teal
+      '8': { bg: 'rgba(130, 130, 150, 0.30)', border: '#828296' },  // Slate
+      '9': { bg: 'rgba(100, 140, 200, 0.30)', border: '#648cc8' },  // Blue
+      '10': { bg: 'rgba(160, 200, 120, 0.30)', border: '#a0c878' }, // Lime
+      '11': { bg: 'rgba(220, 110, 110, 0.30)', border: '#dc6e6e' }, // Coral red
     };
-    return colors[colorId || ''] || { bg: 'rgba(120, 150, 190, 0.28)', border: '#7896be' }; // Default: soft blue
+    return colors[colorId || ''] || { bg: 'rgba(100, 140, 200, 0.30)', border: '#648cc8' }; // Default: blue
   };
 
   const getEventColorStyle = (event: CalendarEvent) => {
