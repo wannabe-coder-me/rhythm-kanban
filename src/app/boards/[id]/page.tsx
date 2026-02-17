@@ -383,6 +383,23 @@ function BoardPageContent() {
     const activeId = active.id as string;
     const overId = over.id as string;
 
+    // Handle drop on calendar slot
+    if (overId.startsWith('calendar-slot-') && dragData?.type === 'task') {
+      const slotData = over.data?.current as { type: string; day: Date; hour: number } | undefined;
+      if (slotData?.type === 'calendar-slot') {
+        const task = dragData.item as Task;
+        const start = new Date(slotData.day);
+        start.setHours(slotData.hour, 0, 0, 0);
+        try {
+          await createEventFromTask(task.id, task.title, start);
+          addToast(`Scheduled: ${task.title} at ${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`, "success");
+        } catch (error) {
+          addToast("Failed to schedule task", "error");
+        }
+      }
+      return;
+    }
+
     // Handle column reordering
     if (dragData?.type === "column") {
       if (activeId !== overId) {

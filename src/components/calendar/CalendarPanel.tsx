@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { format, addDays, startOfWeek, endOfWeek, startOfDay, addHours, isSameDay, parseISO } from 'date-fns';
-import { ChevronLeft, ChevronRight, X, Calendar, Loader2, Link2, GripVertical } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Calendar, Loader2, Link2 } from 'lucide-react';
+import { useDroppable } from '@dnd-kit/core';
 
 interface CalendarEvent {
   id: string;
@@ -166,20 +167,32 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onWidthC
     }
   };
 
-  // Time slot component (drag-drop to be added later)
+  // Time slot drop target for tasks
   const TimeSlot = ({ day, hour }: { day: Date; hour: number }) => {
+    const slotId = `calendar-slot-${day.toISOString()}-${hour}`;
+    const { setNodeRef, isOver } = useDroppable({
+      id: slotId,
+      data: {
+        type: 'calendar-slot',
+        day,
+        hour,
+      },
+    });
+
     const handleClick = () => {
       const start = new Date(day);
       start.setHours(hour, 0, 0, 0);
       const end = addHours(start, 1);
-      // For now, just log - drag-drop to be implemented
-      console.log('Time slot clicked:', { start, end });
+      onEventCreate?.({ start, end });
     };
 
     return (
       <div
+        ref={setNodeRef}
         onClick={handleClick}
-        className="h-[60px] border-b border-white/5 transition-colors hover:bg-white/5 cursor-pointer"
+        className={`h-[60px] border-b border-white/5 transition-colors cursor-pointer ${
+          isOver ? 'bg-violet-500/30' : 'hover:bg-white/5'
+        }`}
       />
     );
   };
