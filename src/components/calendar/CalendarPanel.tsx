@@ -540,7 +540,7 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                       return (
                         <div
                           key={event.id}
-                          className={`absolute left-1 right-1 rounded border-l-2 group cursor-pointer overflow-visible ${colorStyle.className || ''}`}
+                          className="absolute left-1 right-1 rounded border-l-2 group cursor-pointer overflow-visible"
                           style={{ ...getEventStyle(event), ...colorStyle.style }}
                         >
                           {/* Top resize handle - always visible */}
@@ -662,7 +662,7 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                           return (
                             <div
                               key={event.id}
-                              className={`absolute left-0.5 right-0.5 rounded text-[10px] border-l-2 overflow-visible group cursor-pointer ${colorStyle.className || ''}`}
+                              className="absolute left-0.5 right-0.5 rounded text-[10px] border-l-2 overflow-visible group cursor-pointer"
                               style={{ ...getEventStyle(event), ...colorStyle.style }}
                               title={event.title}
                             >
