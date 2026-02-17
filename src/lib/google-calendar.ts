@@ -90,41 +90,43 @@ export async function fetchEvents(
 
   const events = response.data.items || [];
   
+  console.log('[Calendar] Fetched', events.length, 'events for user', connection.email);
+  
   // Filter out declined events
-  return events.filter(event => {
+  const filtered = events.filter(event => {
     // Check event status first - cancelled events should be hidden
     if (event.status === 'cancelled') {
+      console.log('[Calendar] Hiding cancelled:', event.summary);
       return false;
     }
     
-    // If no attendees, show the event
+    // If no attendees, show the event (it's the user's own event)
     if (!event.attendees || event.attendees.length === 0) {
       return true;
     }
     
-    // Find the user's attendance (self=true indicates the calendar owner)
+    // Log attendee info for debugging
     const selfAttendee = event.attendees.find(a => a.self === true);
+    const emailAttendee = connection.email 
+      ? event.attendees.find(a => a.email?.toLowerCase() === connection.email?.toLowerCase())
+      : null;
     
-    // If user is an attendee and declined, hide the event
-    if (selfAttendee && selfAttendee.responseStatus === 'declined') {
-      console.log('[Calendar] Filtering declined event:', event.summary);
-      return false;
-    }
+    const userAttendee = selfAttendee || emailAttendee;
     
-    // Also check the overall event transparency - if "transparent" user marked as free
-    // and responseStatus shows declined for user's email
-    if (connection.email) {
-      const emailAttendee = event.attendees.find(
-        a => a.email?.toLowerCase() === connection.email?.toLowerCase()
-      );
-      if (emailAttendee && emailAttendee.responseStatus === 'declined') {
-        console.log('[Calendar] Filtering declined event (by email):', event.summary);
+    if (userAttendee) {
+      console.log('[Calendar] Event:', event.summary, '| Status:', userAttendee.responseStatus);
+      
+      if (userAttendee.responseStatus === 'declined') {
+        console.log('[Calendar] FILTERING declined:', event.summary);
         return false;
       }
     }
     
     return true;
   });
+  
+  console.log('[Calendar] Returning', filtered.length, 'events after filtering');
+  return filtered;
 }
 
 // Create event in Google Calendar
