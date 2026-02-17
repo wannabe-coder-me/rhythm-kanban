@@ -33,7 +33,35 @@ interface CalendarPanelProps {
 type ViewMode = 'day' | 'week';
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
-const HOUR_HEIGHT = 32; // pixels per hour - fits 24 hours on screen
+
+// Variable hour heights: business hours (6am-6pm) are taller
+const BUSINESS_HOUR_HEIGHT = 48; // pixels per hour during business hours
+const OFF_HOUR_HEIGHT = 20; // pixels per hour during off hours
+const BUSINESS_START = 6; // 6am
+const BUSINESS_END = 18; // 6pm
+
+// Get the height for a specific hour
+const getHourHeight = (hour: number) => {
+  return (hour >= BUSINESS_START && hour < BUSINESS_END) ? BUSINESS_HOUR_HEIGHT : OFF_HOUR_HEIGHT;
+};
+
+// Get the Y position (top) for a specific time (hour + fraction)
+const getYPosition = (time: number) => {
+  let y = 0;
+  const wholeHour = Math.floor(time);
+  const fraction = time - wholeHour;
+  
+  for (let h = 0; h < wholeHour; h++) {
+    y += getHourHeight(h);
+  }
+  y += fraction * getHourHeight(wholeHour);
+  return y;
+};
+
+// Get total height of all hours
+const getTotalHeight = () => {
+  return HOURS.reduce((sum, h) => sum + getHourHeight(h), 0);
+};
 
 const MIN_WIDTH = 280;
 const MAX_WIDTH = 1200;
@@ -211,12 +239,15 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
   const getEventStyle = (event: CalendarEvent) => {
     const start = parseISO(event.start);
     const end = parseISO(event.end);
-    const startHour = start.getHours() + start.getMinutes() / 60;
-    const duration = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+    const startTime = start.getHours() + start.getMinutes() / 60;
+    const endTime = end.getHours() + end.getMinutes() / 60;
+    
+    const topY = getYPosition(startTime);
+    const bottomY = getYPosition(endTime);
     
     return {
-      top: `${startHour * HOUR_HEIGHT}px`,
-      height: `${Math.max(duration * HOUR_HEIGHT, 16)}px`,
+      top: `${topY}px`,
+      height: `${Math.max(bottomY - topY, 16)}px`,
     };
   };
 
@@ -288,11 +319,14 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
       onEventCreate?.({ start, end });
     };
 
+    const height = getHourHeight(hour);
+
     return (
       <div
         ref={setNodeRef}
         onClick={handleClick}
-        className={`h-[32px] border-b border-white/5 transition-colors cursor-pointer ${
+        style={{ height: `${height}px` }}
+        className={`border-b border-white/5 transition-colors cursor-pointer ${
           isOver ? 'bg-violet-500/30' : 'hover:bg-white/5'
         }`}
       />
@@ -435,7 +469,11 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                   {/* Time labels */}
                   <div className="absolute left-0 top-0 w-12 bg-[#0f0f1a] z-10">
                     {HOURS.map(hour => (
-                      <div key={hour} className="h-[32px] flex items-start justify-end pr-2 pt-1">
+                      <div 
+                        key={hour} 
+                        style={{ height: `${getHourHeight(hour)}px` }}
+                        className="flex items-start justify-end pr-2 pt-1"
+                      >
                         <span className="text-[10px] text-white/40">
                           {hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`}
                         </span>
@@ -519,7 +557,11 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                   <div className="w-10 flex-shrink-0 bg-[#0f0f1a]">
                     <div className="h-8" /> {/* Header spacer */}
                     {HOURS.map(hour => (
-                      <div key={hour} className="h-[32px] flex items-start justify-end pr-1 pt-1">
+                      <div 
+                        key={hour} 
+                        style={{ height: `${getHourHeight(hour)}px` }}
+                        className="flex items-start justify-end pr-1 pt-1"
+                      >
                         <span className="text-[9px] text-white/40">
                           {hour === 0 ? '12a' : hour < 12 ? `${hour}a` : hour === 12 ? '12p' : `${hour - 12}p`}
                         </span>
