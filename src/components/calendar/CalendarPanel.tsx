@@ -166,15 +166,15 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
     };
   }, [resizingEvent, events, onEventUpdate]);
 
-  const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
-  const weekEnd = endOfWeek(currentDate, { weekStartsOn: 0 });
+  const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
+  const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   const fetchEvents = useCallback(async () => {
     setIsLoading(true);
     try {
-      const ws = startOfWeek(currentDate, { weekStartsOn: 0 });
-      const we = endOfWeek(currentDate, { weekStartsOn: 0 });
+      const ws = startOfWeek(currentDate, { weekStartsOn: 1 });
+      const we = endOfWeek(currentDate, { weekStartsOn: 1 });
       const start = viewMode === 'day' ? startOfDay(currentDate) : ws;
       const end = viewMode === 'day' ? addDays(startOfDay(currentDate), 1) : addDays(we, 1);
       
