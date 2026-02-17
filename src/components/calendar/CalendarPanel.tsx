@@ -491,9 +491,9 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
       {/* Resize Handle */}
       <div
         onMouseDown={() => setIsResizing(true)}
-        className="absolute left-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-violet-500/30 transition-colors group flex items-center justify-center"
+        className="absolute left-0 top-0 bottom-0 w-3 cursor-col-resize hover:bg-violet-500/30 transition-colors group flex items-center justify-center z-50"
       >
-        <div className="w-1 h-16 bg-white/20 rounded group-hover:bg-violet-400 transition-colors" />
+        <div className="w-1 h-24 bg-white/40 rounded group-hover:bg-violet-400 transition-colors" />
       </div>
 
       {/* Header */}
