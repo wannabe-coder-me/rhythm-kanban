@@ -25,6 +25,7 @@ interface CalendarPanelProps {
   isOpen: boolean;
   onClose: () => void;
   onEventCreate?: (event: { taskId?: string; start: Date; end: Date }) => void;
+  onEventUpdate?: (eventId: string, updates: { start?: Date; end?: Date }) => void;
   onWidthChange?: (width: number) => void;
   initialWidth?: number;
 }
@@ -32,16 +33,17 @@ interface CalendarPanelProps {
 type ViewMode = 'day' | 'week';
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
-const HOUR_HEIGHT = 60; // pixels per hour
+const HOUR_HEIGHT = 32; // pixels per hour - fits 24 hours on screen
 
 const MIN_WIDTH = 280;
 const MAX_WIDTH = 1200;
 const DEFAULT_WIDTH = 450;
 
-export default function CalendarPanel({ isOpen, onClose, onEventCreate, onWidthChange, initialWidth = DEFAULT_WIDTH }: CalendarPanelProps) {
+export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventUpdate, onWidthChange, initialWidth = DEFAULT_WIDTH }: CalendarPanelProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('week');
   const [width, setWidth] = useState(initialWidth);
   const [isResizing, setIsResizing] = useState(false);
+  const [resizingEvent, setResizingEvent] = useState<{ id: string; edge: 'top' | 'bottom'; startY: number; originalStart: Date; originalEnd: Date } | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Handle resize drag
@@ -72,11 +74,67 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onWidthC
       window.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isResizing, onWidthChange]);
+
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+
+  // Handle event resize drag
+  useEffect(() => {
+    if (!resizingEvent) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaY = e.clientY - resizingEvent.startY;
+      const deltaHours = deltaY / HOUR_HEIGHT;
+      
+      if (resizingEvent.edge === 'bottom') {
+        // Extend/shrink end time
+        const newEnd = new Date(resizingEvent.originalEnd.getTime() + deltaHours * 60 * 60 * 1000);
+        // Minimum 30 min duration
+        if (newEnd > new Date(resizingEvent.originalStart.getTime() + 30 * 60 * 1000)) {
+          setEvents(prev => prev.map(ev => 
+            ev.id === resizingEvent.id ? { ...ev, end: newEnd.toISOString() } : ev
+          ));
+        }
+      } else {
+        // Move start time
+        const newStart = new Date(resizingEvent.originalStart.getTime() + deltaHours * 60 * 60 * 1000);
+        // Minimum 30 min duration
+        if (newStart < new Date(resizingEvent.originalEnd.getTime() - 30 * 60 * 1000)) {
+          setEvents(prev => prev.map(ev => 
+            ev.id === resizingEvent.id ? { ...ev, start: newStart.toISOString() } : ev
+          ));
+        }
+      }
+    };
+
+    const handleMouseUp = () => {
+      // Save the new times
+      const event = events.find(e => e.id === resizingEvent.id);
+      if (event && onEventUpdate) {
+        onEventUpdate(resizingEvent.id, {
+          start: parseISO(event.start),
+          end: parseISO(event.end),
+        });
+      }
+      setResizingEvent(null);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.body.style.cursor = 'ns-resize';
+    document.body.style.userSelect = 'none';
+    
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [resizingEvent, events, onEventUpdate]);
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
   const weekEnd = endOfWeek(currentDate, { weekStartsOn: 0 });
@@ -158,8 +216,19 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onWidthC
     
     return {
       top: `${startHour * HOUR_HEIGHT}px`,
-      height: `${Math.max(duration * HOUR_HEIGHT, 24)}px`,
+      height: `${Math.max(duration * HOUR_HEIGHT, 16)}px`,
     };
+  };
+
+  const startEventResize = (event: CalendarEvent, edge: 'top' | 'bottom', e: React.MouseEvent) => {
+    e.stopPropagation();
+    setResizingEvent({
+      id: event.id,
+      edge,
+      startY: e.clientY,
+      originalStart: parseISO(event.start),
+      originalEnd: parseISO(event.end),
+    });
   };
 
   const getPriorityColor = (priority?: string) => {
@@ -231,7 +300,7 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onWidthC
       <div
         ref={setNodeRef}
         onClick={handleClick}
-        className={`h-[60px] border-b border-white/5 transition-colors cursor-pointer ${
+        className={`h-[32px] border-b border-white/5 transition-colors cursor-pointer ${
           isOver ? 'bg-violet-500/30' : 'hover:bg-white/5'
         }`}
       />
@@ -379,7 +448,7 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onWidthC
                   {/* Time labels */}
                   <div className="absolute left-0 top-0 w-12 bg-[#0f0f1a] z-10">
                     {HOURS.map(hour => (
-                      <div key={hour} className="h-[60px] flex items-start justify-end pr-2 pt-1">
+                      <div key={hour} className="h-[32px] flex items-start justify-end pr-2 pt-1">
                         <span className="text-[10px] text-white/40">
                           {hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`}
                         </span>
@@ -399,10 +468,16 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onWidthC
                       return (
                         <div
                           key={event.id}
-                          className={`absolute left-1 right-1 px-2.5 py-1.5 rounded-lg border-l-[3px] backdrop-blur-sm transition-transform hover:scale-[1.02] cursor-pointer ${colorStyle.className || ''}`}
+                          className={`absolute left-1 right-1 rounded-lg border-l-[3px] backdrop-blur-sm group ${colorStyle.className || ''}`}
                           style={{ ...getEventStyle(event), ...colorStyle.style }}
                         >
-                          <div className="flex items-center gap-1.5">
+                          {/* Top resize handle */}
+                          <div 
+                            className="absolute top-0 left-0 right-0 h-2 cursor-ns-resize opacity-0 group-hover:opacity-100 bg-white/20 rounded-t-lg"
+                            onMouseDown={(e) => startEventResize(event, 'top', e)}
+                          />
+                          
+                          <div className="px-2.5 py-1 flex items-center gap-1.5">
                             <span 
                               className="text-xs font-semibold truncate drop-shadow-sm"
                               style={{ color: colorStyle.textColor || '#fff' }}
@@ -414,11 +489,17 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onWidthC
                             )}
                           </div>
                           <span 
-                            className="text-[10px] font-medium opacity-80"
+                            className="text-[10px] font-medium opacity-80 px-2.5"
                             style={{ color: colorStyle.textColor || '#fff' }}
                           >
                             {format(parseISO(event.start), 'h:mm a')}
                           </span>
+                          
+                          {/* Bottom resize handle */}
+                          <div 
+                            className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize opacity-0 group-hover:opacity-100 bg-white/20 rounded-b-lg"
+                            onMouseDown={(e) => startEventResize(event, 'bottom', e)}
+                          />
                         </div>
                       );
                     })}
@@ -462,7 +543,7 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onWidthC
                   <div className="w-10 flex-shrink-0 bg-[#0f0f1a]">
                     <div className="h-8" /> {/* Header spacer */}
                     {HOURS.map(hour => (
-                      <div key={hour} className="h-[60px] flex items-start justify-end pr-1 pt-1">
+                      <div key={hour} className="h-[32px] flex items-start justify-end pr-1 pt-1">
                         <span className="text-[9px] text-white/40">
                           {hour === 0 ? '12a' : hour < 12 ? `${hour}a` : hour === 12 ? '12p' : `${hour - 12}p`}
                         </span>
