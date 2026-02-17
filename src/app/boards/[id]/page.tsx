@@ -339,19 +339,21 @@ function BoardPageContent() {
   };
 
   const handleDragOver = (event: DragOverEvent) => {
-    const { active, over } = event;
-    if (!over || !activeDrag || activeDrag.type !== "task") return;
+    try {
+      const { active, over } = event;
+      if (!over || !activeDrag || activeDrag.type !== "task") return;
 
-    const activeId = active.id as string;
-    const overId = over.id as string;
+      const activeId = active.id as string;
+      const overId = over.id as string;
 
-    // Don't do anything if it's a column being dragged
-    if (isColumnDrag(activeId)) return;
+      // Don't do anything if it's a column being dragged or calendar slot
+      if (isColumnDrag(activeId)) return;
+      if (overId.startsWith('calendar-slot-')) return;
 
-    const activeColumn = findColumnByTaskId(activeId);
-    const overColumn = columns.find((col) => col.id === overId) || findColumnByTaskId(overId);
+      const activeColumn = findColumnByTaskId(activeId);
+      const overColumn = columns.find((col) => col.id === overId) || findColumnByTaskId(overId);
 
-    if (!activeColumn || !overColumn) return;
+      if (!activeColumn || !overColumn) return;
 
     // Moving between columns
     if (activeColumn.id !== overColumn.id) {
@@ -377,19 +379,23 @@ function BoardPageContent() {
         });
       });
     }
+    } catch (error) {
+      console.error('Error in handleDragOver:', error);
+    }
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-    const dragData = activeDrag;
-    setActiveDrag(null);
+    try {
+      const { active, over } = event;
+      const dragData = activeDrag;
+      setActiveDrag(null);
 
-    if (!over) return;
+      if (!over) return;
 
-    const activeId = active.id as string;
-    const overId = over.id as string;
+      const activeId = active.id as string;
+      const overId = over.id as string;
 
-    // Handle drop on calendar slot - open modal for color selection
+      // Handle drop on calendar slot - open modal for color selection
     if (overId.startsWith('calendar-slot-') && dragData?.type === 'task') {
       const slotData = over.data?.current as { type: string; day: Date; hour: number } | undefined;
       if (slotData?.type === 'calendar-slot') {
@@ -477,6 +483,9 @@ function BoardPageContent() {
     } catch (error) {
       console.error("Failed to update task position:", error);
       fetchBoard();
+    }
+    } catch (error) {
+      console.error("Error in handleDragEnd:", error);
     }
   };
 
