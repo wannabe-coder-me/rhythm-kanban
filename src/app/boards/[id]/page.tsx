@@ -949,8 +949,11 @@ function BoardPageContent() {
 
   return (
     <div className="h-screen flex flex-col bg-slate-900">
-      {/* Header */}
-      <header className="border-b border-slate-700 bg-slate-800/50 backdrop-blur-sm shrink-0">
+      {/* Header - shifts left when calendar open */}
+      <header 
+        className="border-b border-slate-700 bg-slate-800/50 backdrop-blur-sm shrink-0 transition-all duration-300"
+        style={{ marginRight: isCalendarOpen ? `${calendarWidth}px` : 0 }}
+      >
         <div className="px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link href="/" className="text-slate-400 hover:text-white transition-colors">

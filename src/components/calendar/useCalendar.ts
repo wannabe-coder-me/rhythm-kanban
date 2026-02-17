@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { addHours } from 'date-fns';
 
 const DEFAULT_WIDTH = 450;
+const STORAGE_KEY = 'rhythm-kanban-calendar';
 
 interface CreateEventParams {
   taskId?: string;
@@ -23,6 +24,29 @@ export function useCalendar() {
   const [isOpen, setIsOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [width, setWidth] = useState(DEFAULT_WIDTH);
+
+  // Load persisted state on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const { isOpen: savedOpen, width: savedWidth } = JSON.parse(saved);
+        if (typeof savedOpen === 'boolean') setIsOpen(savedOpen);
+        if (typeof savedWidth === 'number') setWidth(savedWidth);
+      }
+    } catch (e) {
+      // Ignore localStorage errors
+    }
+  }, []);
+
+  // Persist state changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ isOpen, width }));
+    } catch (e) {
+      // Ignore localStorage errors
+    }
+  }, [isOpen, width]);
 
   const openCalendar = useCallback(() => setIsOpen(true), []);
   const closeCalendar = useCallback(() => setIsOpen(false), []);
