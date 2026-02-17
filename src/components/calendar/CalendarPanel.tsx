@@ -29,13 +29,17 @@ interface CalendarPanelProps {
     title?: string;
     start: Date; 
     end: Date;
+    colorId?: string;
     recurrence?: { frequency: 'daily' | 'weekly' | 'monthly'; interval?: number };
   }) => void;
-  onEventUpdate?: (eventId: string, updates: { start?: Date; end?: Date }) => void;
+  onEventUpdate?: (eventId: string, updates: { start?: Date; end?: Date; colorId?: string }) => void;
   onEventDelete?: (eventId: string) => Promise<void>;
   onWidthChange?: (width: number) => void;
   initialWidth?: number;
   refreshKey?: number;
+  // For opening create modal from outside (e.g., task drop)
+  pendingTask?: { id: string; title: string; start: Date; end: Date } | null;
+  onPendingTaskHandled?: () => void;
 }
 
 type ViewMode = 'day' | 'week';
@@ -75,7 +79,7 @@ const MIN_WIDTH = 280;
 const MAX_WIDTH = 1200;
 const DEFAULT_WIDTH = 450;
 
-export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventUpdate, onEventDelete, onWidthChange, initialWidth = DEFAULT_WIDTH, refreshKey }: CalendarPanelProps) {
+export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventUpdate, onEventDelete, onWidthChange, initialWidth = DEFAULT_WIDTH, refreshKey, pendingTask, onPendingTaskHandled }: CalendarPanelProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('week');
   const [width, setWidth] = useState(initialWidth);
   const [isResizing, setIsResizing] = useState(false);
@@ -84,9 +88,25 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
   
   // Event creation modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newEventData, setNewEventData] = useState<{ start: Date; end: Date } | null>(null);
+  const [newEventData, setNewEventData] = useState<{ start: Date; end: Date; taskId?: string } | null>(null);
   const [newEventTitle, setNewEventTitle] = useState('');
   const [newEventRecurrence, setNewEventRecurrence] = useState<'none' | 'daily' | 'weekly' | 'monthly'>('none');
+  const [newEventColorId, setNewEventColorId] = useState<string>('9'); // Default blue
+  
+  // Color options for picker
+  const colorOptions = [
+    { id: '1', name: 'Purple', color: '#9c78b4' },
+    { id: '2', name: 'Green', color: '#50a064' },
+    { id: '3', name: 'Rose', color: '#c86482' },
+    { id: '4', name: 'Orange', color: '#dca064' },
+    { id: '5', name: 'Gold', color: '#c8b450' },
+    { id: '6', name: 'Rust', color: '#b46450' },
+    { id: '7', name: 'Teal', color: '#50b4b4' },
+    { id: '8', name: 'Slate', color: '#828296' },
+    { id: '9', name: 'Blue', color: '#648cc8' },
+    { id: '10', name: 'Lime', color: '#a0c878' },
+    { id: '11', name: 'Coral', color: '#dc6e6e' },
+  ];
   
   // Event detail modal state
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
@@ -228,6 +248,17 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
       window.removeEventListener('mouseup', handleMouseUp);
     };
   }, [draggingEvent, events, onEventUpdate]);
+
+  // Handle pending task (dropped from kanban) - open create modal
+  useEffect(() => {
+    if (pendingTask) {
+      setNewEventTitle(pendingTask.title);
+      setNewEventData({ start: pendingTask.start, end: pendingTask.end, taskId: pendingTask.id });
+      setNewEventColorId('9'); // Default blue
+      setNewEventRecurrence('none');
+      setShowCreateModal(true);
+    }
+  }, [pendingTask]);
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
@@ -818,11 +849,31 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                   <option value="monthly">Monthly</option>
                 </select>
               </div>
+              
+              <div>
+                <label className="text-xs text-slate-400 block mb-1">Color</label>
+                <div className="flex flex-wrap gap-2">
+                  {colorOptions.map(opt => (
+                    <button
+                      key={opt.id}
+                      onClick={() => setNewEventColorId(opt.id)}
+                      className={`w-6 h-6 rounded-full border-2 transition-all ${
+                        newEventColorId === opt.id ? 'border-white scale-110' : 'border-transparent hover:scale-105'
+                      }`}
+                      style={{ backgroundColor: opt.color }}
+                      title={opt.name}
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
             
             <div className="flex gap-2 mt-4">
               <button
-                onClick={() => setShowCreateModal(false)}
+                onClick={() => {
+                  setShowCreateModal(false);
+                  onPendingTaskHandled?.();
+                }}
                 className="flex-1 px-3 py-2 text-sm text-slate-400 hover:text-white transition-colors"
               >
                 Cancel
@@ -831,12 +882,15 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                 onClick={() => {
                   if (newEventTitle.trim()) {
                     onEventCreate?.({
+                      taskId: newEventData.taskId,
                       title: newEventTitle,
                       start: newEventData.start,
                       end: newEventData.end,
+                      colorId: newEventColorId,
                       recurrence: newEventRecurrence !== 'none' ? { frequency: newEventRecurrence } : undefined,
                     });
                     setShowCreateModal(false);
+                    onPendingTaskHandled?.();
                   }
                 }}
                 disabled={!newEventTitle.trim()}

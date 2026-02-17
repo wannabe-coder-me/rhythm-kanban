@@ -72,8 +72,9 @@ function BoardPageContent() {
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [calendarRefreshKey, setCalendarRefreshKey] = useState(0);
   const [showArchived, setShowArchived] = useState(false);
+  const [pendingCalendarTask, setPendingCalendarTask] = useState<{ id: string; title: string; start: Date; end: Date } | null>(null);
   const { toasts, addToast, dismissToast } = useToasts();
-  const { isOpen: isCalendarOpen, toggleCalendar, closeCalendar, createEventFromTask, updateEvent, deleteEvent, width: calendarWidth, handleWidthChange: handleCalendarWidthChange } = useCalendar();
+  const { isOpen: isCalendarOpen, toggleCalendar, closeCalendar, createEvent, updateEvent, deleteEvent, width: calendarWidth, handleWidthChange: handleCalendarWidthChange } = useCalendar();
   
   // Refs for focusing elements
   const filterInputRef = useRef<HTMLInputElement>(null);
@@ -388,21 +389,17 @@ function BoardPageContent() {
     const activeId = active.id as string;
     const overId = over.id as string;
 
-    // Handle drop on calendar slot
+    // Handle drop on calendar slot - open modal for color selection
     if (overId.startsWith('calendar-slot-') && dragData?.type === 'task') {
       const slotData = over.data?.current as { type: string; day: Date; hour: number } | undefined;
       if (slotData?.type === 'calendar-slot') {
         const task = dragData.item as Task;
         const start = new Date(slotData.day);
         start.setHours(slotData.hour, 0, 0, 0);
-        try {
-          await createEventFromTask(task.id, task.title, start, 1, task.priority);
-          // Silent - no toast for calendar scheduling
-          // Trigger calendar refresh
-          setCalendarRefreshKey(k => k + 1);
-        } catch (error) {
-          addToast("Failed to schedule task", "error");
-        }
+        const end = new Date(start);
+        end.setHours(start.getHours() + 1);
+        // Set pending task to open color picker modal
+        setPendingCalendarTask({ id: task.id, title: task.title, start, end });
       }
       return;
     }
@@ -1257,6 +1254,8 @@ function BoardPageContent() {
             initialWidth={calendarWidth}
             onWidthChange={handleCalendarWidthChange}
             refreshKey={calendarRefreshKey}
+            pendingTask={pendingCalendarTask}
+            onPendingTaskHandled={() => setPendingCalendarTask(null)}
             onEventUpdate={async (eventId, updates) => {
               try {
                 await updateEvent(eventId, updates);
@@ -1269,28 +1268,21 @@ function BoardPageContent() {
               await deleteEvent(eventId);
               addToast("Event deleted", "success");
             }}
-            onEventCreate={async ({ taskId, title, start, end, recurrence }) => {
+            onEventCreate={async ({ taskId, title, start, end, colorId, recurrence }) => {
               try {
-                if (taskId) {
-                  // Creating from a task drag-drop
-                  const task = getAllTasks().find((t) => t.id === taskId);
-                  if (task) {
-                    await createEventFromTask(taskId, task.title, start, 1, task.priority);
-                  }
-                } else if (title) {
-                  // Creating standalone event from calendar click
-                  const res = await fetch('/api/calendar/events', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      title,
-                      start: start.toISOString(),
-                      end: end.toISOString(),
-                      recurrence,
-                    }),
-                  });
-                  if (!res.ok) throw new Error('Failed to create event');
-                }
+                const res = await fetch('/api/calendar/events', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    title,
+                    start: start.toISOString(),
+                    end: end.toISOString(),
+                    taskId,
+                    colorId,
+                    recurrence,
+                  }),
+                });
+                if (!res.ok) throw new Error('Failed to create event');
                 setCalendarRefreshKey(k => k + 1);
               } catch (error) {
                 addToast("Failed to create calendar event", "error");
