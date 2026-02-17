@@ -72,7 +72,7 @@ function BoardPageContent() {
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [calendarRefreshKey, setCalendarRefreshKey] = useState(0);
   const { toasts, addToast, dismissToast } = useToasts();
-  const { isOpen: isCalendarOpen, toggleCalendar, closeCalendar, createEventFromTask, width: calendarWidth, handleWidthChange: handleCalendarWidthChange } = useCalendar();
+  const { isOpen: isCalendarOpen, toggleCalendar, closeCalendar, createEventFromTask, updateEvent, width: calendarWidth, handleWidthChange: handleCalendarWidthChange } = useCalendar();
   
   // Refs for focusing elements
   const filterInputRef = useRef<HTMLInputElement>(null);
@@ -392,7 +392,7 @@ function BoardPageContent() {
         const start = new Date(slotData.day);
         start.setHours(slotData.hour, 0, 0, 0);
         try {
-          await createEventFromTask(task.id, task.title, start);
+          await createEventFromTask(task.id, task.title, start, 1, task.priority);
           addToast(`Scheduled: ${task.title} at ${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`, "success");
           // Trigger calendar refresh
           setCalendarRefreshKey(k => k + 1);
@@ -1240,13 +1240,22 @@ function BoardPageContent() {
             initialWidth={calendarWidth}
             onWidthChange={handleCalendarWidthChange}
             refreshKey={calendarRefreshKey}
+            onEventUpdate={async (eventId, updates) => {
+              try {
+                await updateEvent(eventId, updates);
+                setCalendarRefreshKey(k => k + 1);
+              } catch (error) {
+                addToast("Failed to update event", "error");
+              }
+            }}
             onEventCreate={async ({ taskId, start, end }) => {
               if (taskId) {
                 const task = getAllTasks().find((t) => t.id === taskId);
                 if (task) {
                   try {
-                    await createEventFromTask(taskId, task.title, start);
+                    await createEventFromTask(taskId, task.title, start, 1, task.priority);
                     addToast(`Scheduled: ${task.title}`, "success");
+                    setCalendarRefreshKey(k => k + 1);
                   } catch (error) {
                     addToast("Failed to create calendar event", "error");
                   }

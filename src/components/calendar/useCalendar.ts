@@ -11,6 +11,7 @@ interface CreateEventParams {
   description?: string;
   start: Date;
   end: Date;
+  colorId?: string;
   recurrence?: {
     frequency: 'daily' | 'weekly' | 'monthly';
     interval?: number;
@@ -40,6 +41,7 @@ export function useCalendar() {
           start: params.start.toISOString(),
           end: params.end.toISOString(),
           taskId: params.taskId,
+          colorId: params.colorId,
           recurrence: params.recurrence,
         }),
       });
@@ -58,11 +60,23 @@ export function useCalendar() {
     }
   }, []);
 
+  // Map task priority to Google Calendar colorId
+  const priorityToColorId = (priority?: string): string | undefined => {
+    switch (priority) {
+      case 'urgent': return '11'; // Tomato/Red
+      case 'high': return '6';    // Tangerine/Orange  
+      case 'medium': return '5';  // Banana/Yellow
+      case 'low': return '2';     // Sage/Green
+      default: return undefined;
+    }
+  };
+
   const createEventFromTask = useCallback(async (
     taskId: string, 
     taskTitle: string,
     start: Date,
-    durationHours: number = 1
+    durationHours: number = 1,
+    priority?: string
   ) => {
     const end = addHours(start, durationHours);
     return createEvent({
@@ -70,6 +84,7 @@ export function useCalendar() {
       title: taskTitle,
       start,
       end,
+      colorId: priorityToColorId(priority),
     });
   }, [createEvent]);
 
