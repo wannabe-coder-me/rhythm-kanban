@@ -92,6 +92,11 @@ export async function fetchEvents(
   
   // Filter out declined events
   return events.filter(event => {
+    // Check event status first - cancelled events should be hidden
+    if (event.status === 'cancelled') {
+      return false;
+    }
+    
     // If no attendees, show the event
     if (!event.attendees || event.attendees.length === 0) {
       return true;
@@ -100,13 +105,25 @@ export async function fetchEvents(
     // Find the user's attendance (self=true indicates the calendar owner)
     const selfAttendee = event.attendees.find(a => a.self === true);
     
-    // If user is not an attendee or hasn't declined, show the event
-    if (!selfAttendee || selfAttendee.responseStatus !== 'declined') {
-      return true;
+    // If user is an attendee and declined, hide the event
+    if (selfAttendee && selfAttendee.responseStatus === 'declined') {
+      console.log('[Calendar] Filtering declined event:', event.summary);
+      return false;
     }
     
-    // User declined - hide the event
-    return false;
+    // Also check the overall event transparency - if "transparent" user marked as free
+    // and responseStatus shows declined for user's email
+    if (connection.email) {
+      const emailAttendee = event.attendees.find(
+        a => a.email?.toLowerCase() === connection.email?.toLowerCase()
+      );
+      if (emailAttendee && emailAttendee.responseStatus === 'declined') {
+        console.log('[Calendar] Filtering declined event (by email):', event.summary);
+        return false;
+      }
+    }
+    
+    return true;
   });
 }
 
