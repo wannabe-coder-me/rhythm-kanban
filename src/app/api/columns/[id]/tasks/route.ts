@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { emitBoardEvent } from "@/lib/events";
 import { createAndEmitActivity } from "@/lib/activity";
+import { getAuthUser } from "@/lib/mobile-auth";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  const user = await getAuthUser(req);
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -21,7 +20,7 @@ export async function GET(
       columnId: id,
       parentId: null, // Only return parent tasks, not subtasks
       column: {
-        board: { members: { some: { userId: session.user.id } } },
+        board: { members: { some: { userId: user.id } } },
       },
     },
     orderBy: { position: "asc" },
@@ -42,8 +41,8 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  const user = await getAuthUser(req);
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -63,7 +62,7 @@ export async function POST(
     return NextResponse.json({ error: "Column not found" }, { status: 404 });
   }
 
-  const isMember = column.board.members.some((m) => m.userId === session.user.id);
+  const isMember = column.board.members.some((m) => m.userId === user.id);
   if (!isMember) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -81,7 +80,7 @@ export async function POST(
       priority: priority || "medium",
       dueDate: dueDate ? new Date(dueDate) : null,
       assigneeId: assigneeId || null,
-      createdById: session.user.id,
+      createdById: user.id,
       position: (maxPosition._max.position ?? -1) + 1,
       parentId: parentId || null,
       ...(labelIds && labelIds.length > 0 && {
@@ -101,13 +100,13 @@ export async function POST(
   });
 
   // Create activity and emit to subscribers
-  await createAndEmitActivity(task.id, session.user.id, "created", { title: task.title });
+  await createAndEmitActivity(task.id, user.id, "created", { title: task.title });
 
   // Emit real-time event
   emitBoardEvent(column.board.id, {
     type: "task:created",
     task: task,
-    userId: session.user.id,
+    userId: user.id,
   });
 
   return NextResponse.json(task);

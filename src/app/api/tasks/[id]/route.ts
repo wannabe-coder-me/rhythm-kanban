@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getAuthUser } from "@/lib/mobile-auth";
+
 import { prisma } from "@/lib/prisma";
 import { notifyAssigned } from "@/lib/notifications";
 import { emitBoardEvent } from "@/lib/events";
@@ -10,8 +10,8 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  const user = await getAuthUser(req);
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -21,7 +21,7 @@ export async function GET(
     where: {
       id,
       column: {
-        board: { members: { some: { userId: session.user.id } } },
+        board: { members: { some: { userId: user.id } } },
       },
     },
     include: {
@@ -93,8 +93,8 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  const user = await getAuthUser(req);
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -113,8 +113,8 @@ export async function PATCH(
     return NextResponse.json({ error: "Task not found" }, { status: 404 });
   }
 
-  const isOwner = task.column.board.ownerId === session.user.id;
-  const isMember = task.column.board.members.some((m) => m.userId === session.user.id);
+  const isOwner = task.column.board.ownerId === user.id;
+  const isMember = task.column.board.members.some((m) => m.userId === user.id);
   if (!isOwner && !isMember) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -140,9 +140,9 @@ export async function PATCH(
     });
 
     // Send notification to the new assignee (if not self-assigning)
-    if (assigneeId && assigneeId !== session.user.id) {
+    if (assigneeId && assigneeId !== user.id) {
       const currentUser = await prisma.user.findUnique({
-        where: { id: session.user.id },
+        where: { id: user.id },
         select: { name: true },
       });
       await notifyAssigned(
@@ -216,14 +216,14 @@ export async function PATCH(
 
   // Create activities and emit to subscribers
   for (const activity of activities) {
-    await createAndEmitActivity(id, session.user.id, activity.action, activity.details);
+    await createAndEmitActivity(id, user.id, activity.action, activity.details);
   }
 
   // Track completion activity
   if (completed !== undefined && completed !== task.completed) {
     await createAndEmitActivity(
       id,
-      session.user.id,
+      user.id,
       completed ? "completed" : "reopened",
       { title: task.title }
     );
@@ -265,13 +265,13 @@ export async function PATCH(
       taskId: id,
       columnId,
       position: position ?? 0,
-      userId: session.user.id,
+      userId: user.id,
     });
   }
   emitBoardEvent(boardId, {
     type: "task:updated",
     task: updated,
-    userId: session.user.id,
+    userId: user.id,
   });
 
   return NextResponse.json(updated);
@@ -281,8 +281,8 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  const user = await getAuthUser(req);
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -299,8 +299,8 @@ export async function DELETE(
     return NextResponse.json({ error: "Task not found" }, { status: 404 });
   }
 
-  const isOwner = task.column.board.ownerId === session.user.id;
-  const isMember = task.column.board.members.some((m) => m.userId === session.user.id);
+  const isOwner = task.column.board.ownerId === user.id;
+  const isMember = task.column.board.members.some((m) => m.userId === user.id);
   if (!isOwner && !isMember) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -312,7 +312,7 @@ export async function DELETE(
   emitBoardEvent(boardId, {
     type: "task:deleted",
     taskId: id,
-    userId: session.user.id,
+    userId: user.id,
   });
 
   return NextResponse.json({ success: true });
@@ -323,8 +323,8 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  const user = await getAuthUser(req);
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -348,7 +348,7 @@ export async function POST(
     return NextResponse.json({ error: "Parent task not found" }, { status: 404 });
   }
 
-  const isMember = parentTask.column.board.members.some((m) => m.userId === session.user.id);
+  const isMember = parentTask.column.board.members.some((m) => m.userId === user.id);
   if (!isMember) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -361,7 +361,7 @@ export async function POST(
       title: title.trim(),
       priority: "medium",
       assigneeId: assigneeId || null,
-      createdById: session.user.id,
+      createdById: user.id,
       position: parentTask.subtasks.length,
       completed: false,
     },
@@ -371,14 +371,14 @@ export async function POST(
   });
 
   // Create activity and emit to subscribers
-  await createAndEmitActivity(parentId, session.user.id, "added subtask", { subtaskTitle: subtask.title });
+  await createAndEmitActivity(parentId, user.id, "added subtask", { subtaskTitle: subtask.title });
 
   // Emit real-time event
   const boardId = parentTask.column.board.id;
   emitBoardEvent(boardId, {
     type: "task:created",
     task: subtask,
-    userId: session.user.id,
+    userId: user.id,
   });
 
   return NextResponse.json(subtask);
