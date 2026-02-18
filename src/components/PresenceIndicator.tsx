@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { clsx } from "clsx";
 
 interface PresenceIndicatorProps {
@@ -45,7 +46,22 @@ function getInitials(name: string): string {
     .slice(0, 2);
 }
 
-export function PresenceIndicator({
+// Custom comparison to prevent re-renders when users array has same content
+function arePropsEqual(
+  prev: PresenceIndicatorProps,
+  next: PresenceIndicatorProps
+): boolean {
+  if (prev.currentUserId !== next.currentUserId) return false;
+  if (prev.maxVisible !== next.maxVisible) return false;
+  if (prev.users.length !== next.users.length) return false;
+  
+  // Compare user IDs only (names don't change often)
+  const prevIds = prev.users.map(u => u.userId).sort().join(',');
+  const nextIds = next.users.map(u => u.userId).sort().join(',');
+  return prevIds === nextIds;
+}
+
+export const PresenceIndicator = memo(function PresenceIndicator({
   users,
   currentUserId,
   maxVisible = 5,
@@ -92,4 +108,4 @@ export function PresenceIndicator({
       </div>
     </div>
   );
-}
+}, arePropsEqual);
