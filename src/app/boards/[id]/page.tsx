@@ -1016,6 +1016,11 @@ function BoardPageContent() {
               </svg>
               My Tasks
             </Link>
+            {/* Real-time presence indicator - placed before view switcher to avoid flicker */}
+            <PresenceIndicator
+              users={connectedUsers}
+              currentUserId={session?.user?.id}
+            />
             {/* View Switcher */}
             <div className="hidden sm:flex items-center bg-slate-700 rounded-lg p-0.5">
               <div className="flex items-center gap-2 px-3 py-1.5 text-sm text-white bg-slate-600 rounded-md">
@@ -1052,11 +1057,6 @@ function BoardPageContent() {
                 Timeline
               </Link>
             </div>
-            {/* Real-time presence indicator */}
-            <PresenceIndicator
-              users={connectedUsers}
-              currentUserId={session?.user?.id}
-            />
             {/* Connection status indicator */}
             {!isConnected && (
               <div className="flex items-center gap-1 text-amber-400 text-xs">
