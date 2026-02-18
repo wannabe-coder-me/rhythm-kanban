@@ -28,8 +28,15 @@ export function useBoardEvents(
 ) {
   const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Use ref for callback to avoid reconnection loops when callback identity changes
+  const onEventRef = useRef(onEvent);
   const [isConnected, setIsConnected] = useState(false);
   const [connectedUsers, setConnectedUsers] = useState<Array<{ userId: string; userName: string }>>([]);
+
+  // Keep callback ref up to date
+  useEffect(() => {
+    onEventRef.current = onEvent;
+  }, [onEvent]);
 
   const connect = useCallback(() => {
     if (!enabled || !boardId) return;
@@ -65,7 +72,8 @@ export function useBoardEvents(
           setConnectedUsers((prev) => prev.filter((u) => u.userId !== event.userId));
         }
         
-        onEvent(event);
+        // Use ref to always get latest callback without causing reconnects
+        onEventRef.current(event);
       } catch (error) {
         console.error("Failed to parse SSE event:", error);
       }
@@ -80,7 +88,7 @@ export function useBoardEvents(
         connect();
       }, 3000);
     };
-  }, [boardId, enabled, onEvent]);
+  }, [boardId, enabled]); // Removed onEvent - using ref instead
 
   useEffect(() => {
     connect();
