@@ -86,6 +86,17 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
   const [resizingEvent, setResizingEvent] = useState<{ id: string; edge: 'top' | 'bottom'; startY: number; originalStart: Date; originalEnd: Date } | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   
+  // Current time indicator
+  const [currentTime, setCurrentTime] = useState(new Date());
+  
+  // Update current time every minute
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000); // Update every minute
+    return () => clearInterval(interval);
+  }, []);
+  
   // Event creation modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newEventData, setNewEventData] = useState<{ start: Date; end: Date; taskId?: string } | null>(null);
@@ -442,6 +453,27 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
     return { style: { backgroundColor: color.bg, borderLeftColor: color.border } };
   };
 
+  // Current time indicator component
+  const CurrentTimeIndicator = ({ show }: { show: boolean }) => {
+    if (!show) return null;
+    const hours = currentTime.getHours();
+    const minutes = currentTime.getMinutes();
+    const timePosition = hours + minutes / 60;
+    const top = getYPosition(timePosition);
+    
+    return (
+      <div 
+        className="absolute left-0 right-0 z-30 pointer-events-none"
+        style={{ top: `${top}px` }}
+      >
+        <div className="flex items-center">
+          <div className="w-2 h-2 rounded-full bg-red-500" />
+          <div className="flex-1 h-0.5 bg-red-500" />
+        </div>
+      </div>
+    );
+  };
+
   // Time slot drop target for tasks
   const TimeSlot = ({ day, hour }: { day: Date; hour: number }) => {
     const slotId = `calendar-slot-${day.toISOString()}-${hour}`;
@@ -646,6 +678,9 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                       <TimeSlot key={hour} day={currentDate} hour={hour} />
                     ))}
                     
+                    {/* Current time indicator - only show on today */}
+                    <CurrentTimeIndicator show={isSameDay(currentDate, new Date())} />
+                    
                     {/* Timed Events */}
                     {getTimedEventsForDay(currentDate).map(event => {
                       const colorStyle = getEventColorStyle(event);
@@ -767,6 +802,9 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                         {HOURS.map(hour => (
                           <TimeSlot key={hour} day={day} hour={hour} />
                         ))}
+                        
+                        {/* Current time indicator - only show on today */}
+                        <CurrentTimeIndicator show={isSameDay(day, new Date())} />
                         
                         {/* Timed Events */}
                         {getTimedEventsForDay(day).map(event => {
