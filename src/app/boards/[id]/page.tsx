@@ -272,9 +272,8 @@ function BoardPageContent() {
         break;
 
       case "user:joined":
-        if (event.userId !== session?.user?.id) {
-          addToast(`${event.userName} joined the board`, "info", 3000);
-        }
+        // Suppressed - too spammy on reconnects/page loads
+        // Connected users shown in header instead
         break;
 
       case "user:left":
