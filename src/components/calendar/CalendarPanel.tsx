@@ -636,7 +636,7 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                 {/* All-day events section */}
                 {getAllDayEventsForDay(currentDate).length > 0 && (
                   <div className="border-b border-white/10 p-2 bg-[#0f0f1a]/50">
-                    <span className="text-[10px] text-white/40 mb-1 block">ALL DAY</span>
+                    <span className="text-xs text-white/60 font-medium mb-1 block">ALL DAY</span>
                     <div className="flex flex-wrap gap-1">
                       {getAllDayEventsForDay(currentDate).map(event => {
                         const colorStyle = getEventColorStyle(event);
@@ -665,7 +665,7 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                         style={{ height: `${getHourHeight(hour)}px` }}
                         className="flex items-start justify-end pr-2 pt-1"
                       >
-                        <span className="text-[10px] text-white/40">
+                        <span className="text-xs font-medium text-white/70">
                           {hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`}
                         </span>
                       </div>
@@ -712,14 +712,14 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                           >×</button>
                           
                           <div className="flex items-center gap-1 pr-5 px-2 pt-2">
-                            <span className="text-xs font-medium text-white truncate">
+                            <span className="text-sm font-semibold text-white truncate drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
                               {event.title}
                             </span>
                             {event.task && (
                               <Link2 className="w-3 h-3 text-violet-400 flex-shrink-0" />
                             )}
                           </div>
-                          <span className="text-[10px] text-white/50 px-2">
+                          <span className="text-xs text-white/80 px-2 drop-shadow-[0_1px_1px_rgba(0,0,0,0.6)]">
                             {format(parseISO(event.start), 'h:mm a')}
                           </span>
                           
@@ -753,7 +753,7 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                           return (
                             <div
                               key={event.id}
-                              className="border-l-2 px-1 py-0.5 rounded text-[9px] mb-0.5 truncate"
+                              className="border-l-2 px-1 py-0.5 rounded text-xs mb-0.5 truncate"
                               style={colorStyle.style}
                               title={event.title}
                             >
@@ -769,15 +769,15 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                 {/* Time grid */}
                 <div className="flex flex-1 overflow-auto">
                   {/* Time labels */}
-                  <div className="w-10 flex-shrink-0 bg-[#0f0f1a]">
+                  <div className="w-12 flex-shrink-0 bg-[#0f0f1a]">
                     <div className="h-8" /> {/* Header spacer */}
                     {HOURS.map(hour => (
                       <div 
                         key={hour} 
                         style={{ height: `${getHourHeight(hour)}px` }}
-                        className="flex items-start justify-end pr-1 pt-1"
+                        className="flex items-start justify-end pr-2 pt-1"
                       >
-                        <span className="text-[9px] text-white/40">
+                        <span className="text-[11px] font-medium text-white/70">
                           {hour === 0 ? '12a' : hour < 12 ? `${hour}a` : hour === 12 ? '12p' : `${hour - 12}p`}
                         </span>
                       </div>
@@ -812,7 +812,7 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                           return (
                             <div
                               key={event.id}
-                              className="absolute left-0.5 right-0.5 rounded text-[10px] border-l-2 overflow-visible group cursor-grab"
+                              className="absolute left-0.5 right-0.5 rounded text-xs border-l-2 overflow-visible group cursor-grab"
                               style={{ ...getEventStyle(event), ...colorStyle.style }}
                               title={event.title}
                               onMouseDown={(e) => startEventDrag(event, e)}
@@ -837,7 +837,7 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                                 className="absolute top-0 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-20 text-red-500 hover:text-red-400 text-[16px] font-bold leading-none"
                               >×</button>
                               
-                              <span className="font-medium text-white truncate block px-1 pt-1 pr-4">
+                              <span className="font-semibold text-white truncate block px-1 pt-1 pr-4 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
                                 {event.title}
                               </span>
                               
