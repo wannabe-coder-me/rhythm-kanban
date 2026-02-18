@@ -173,25 +173,21 @@ li a {
   outline: none;
 }
 
-/* Table view date input - smaller calendar icon */
+/* Table view date input - hide native calendar icon */
 .table-date-input {
   min-height: auto !important;
   min-width: auto !important;
-  font-size: 12px;
+  font-size: 11px !important;
+  width: 90px;
 }
 
 .table-date-input::-webkit-calendar-picker-indicator {
-  transform: scale(0.7);
-  opacity: 0.5;
-  cursor: pointer;
-  margin-left: -4px;
+  display: none !important;
+  -webkit-appearance: none !important;
 }
 
-.table-date-input::-webkit-calendar-picker-indicator:hover {
-  opacity: 1;
-}
-
-/* Firefox */
-.table-date-input::-moz-calendar-picker-indicator {
-  transform: scale(0.7);
+.table-date-input::-webkit-inner-spin-button,
+.table-date-input::-webkit-clear-button {
+  display: none !important;
+  -webkit-appearance: none !important;
 }
