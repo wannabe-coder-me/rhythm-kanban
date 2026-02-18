@@ -244,3 +244,39 @@ git add -A && git commit -m "message" && git push origin main
 npm install
 npm run dev  # http://localhost:3000
 ```
+
+## Known Issues & Fixes (Feb 2026)
+
+### PWA Touch Target Override
+The PWA CSS sets `min-height: 44px` on form controls for touch accessibility. In table view, this makes checkboxes huge. Override with:
+```css
+.table-checkbox {
+  min-height: 12px !important;
+  min-width: 12px !important;
+  width: 12px !important;
+  height: 12px !important;
+}
+```
+
+### Date Picker Icon Styling
+Native browser date picker icons can't be reliably styled across browsers. Solution: hide the native picker icon with CSS and add a manual SVG icon:
+```css
+.table-date-input::-webkit-calendar-picker-indicator {
+  display: none !important;
+}
+```
+
+### SSE Connection Stability
+The `useBoardEvents` hook must use a **ref** for the `onEvent` callback, not a dependency. Otherwise, every parent re-render causes SSE reconnection loops and UI flicker:
+```typescript
+const onEventRef = useRef(onEvent);
+useEffect(() => { onEventRef.current = onEvent; }, [onEvent]);
+// In connect(): onEventRef.current(event) instead of onEvent(event)
+```
+
+### Presence Indicator Performance
+- Removed `animate-ping` from green "online" dot (caused visual flicker)
+- Wrapped component in `React.memo` with custom comparison to prevent re-renders when user array reference changes but content is the same
+
+### Suppressed "Joined Board" Toasts
+The `user:joined` event fires on every page load/reconnect, not just first join. Toast notification removed - connected users shown in header instead.
