@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthUser } from "@/lib/auth";
+import { getAuthUser } from "@/lib/mobile-auth";
 import { prisma } from "@/lib/prisma";
 import { createAndEmitActivity } from "@/lib/activity";
 
