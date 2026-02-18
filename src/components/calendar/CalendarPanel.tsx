@@ -370,6 +370,74 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
     };
   };
 
+  // Calculate layout for overlapping events (Google Calendar style)
+  const getEventsWithLayout = (dayEvents: CalendarEvent[]) => {
+    if (dayEvents.length === 0) return [];
+    
+    // Sort events by start time, then by duration (longer first)
+    const sorted = [...dayEvents].sort((a, b) => {
+      const startA = parseISO(a.start).getTime();
+      const startB = parseISO(b.start).getTime();
+      if (startA !== startB) return startA - startB;
+      // Longer events first
+      const durationA = parseISO(a.end).getTime() - startA;
+      const durationB = parseISO(b.end).getTime() - startB;
+      return durationB - durationA;
+    });
+
+    // Track columns and assign each event to a column
+    const columns: CalendarEvent[][] = [];
+    const eventLayouts: Map<string, { column: number; totalColumns: number }> = new Map();
+
+    sorted.forEach(event => {
+      const eventStart = parseISO(event.start).getTime();
+      const eventEnd = parseISO(event.end).getTime();
+      
+      // Find first column where event doesn't overlap
+      let columnIndex = 0;
+      while (columnIndex < columns.length) {
+        const columnEvents = columns[columnIndex];
+        const hasOverlap = columnEvents.some(colEvent => {
+          const colStart = parseISO(colEvent.start).getTime();
+          const colEnd = parseISO(colEvent.end).getTime();
+          return eventStart < colEnd && eventEnd > colStart;
+        });
+        if (!hasOverlap) break;
+        columnIndex++;
+      }
+      
+      // Add to column (create if needed)
+      if (!columns[columnIndex]) columns[columnIndex] = [];
+      columns[columnIndex].push(event);
+      eventLayouts.set(event.id, { column: columnIndex, totalColumns: 0 });
+    });
+
+    // Calculate total overlapping columns for each event
+    sorted.forEach(event => {
+      const eventStart = parseISO(event.start).getTime();
+      const eventEnd = parseISO(event.end).getTime();
+      
+      // Count how many columns have events that overlap with this one
+      let maxOverlappingColumns = 0;
+      columns.forEach((colEvents, colIdx) => {
+        const hasOverlap = colEvents.some(colEvent => {
+          const colStart = parseISO(colEvent.start).getTime();
+          const colEnd = parseISO(colEvent.end).getTime();
+          return eventStart < colEnd && eventEnd > colStart;
+        });
+        if (hasOverlap) maxOverlappingColumns = colIdx + 1;
+      });
+      
+      const layout = eventLayouts.get(event.id)!;
+      layout.totalColumns = maxOverlappingColumns;
+    });
+
+    return sorted.map(event => ({
+      event,
+      layout: eventLayouts.get(event.id)!
+    }));
+  };
+
   const startEventResize = (event: CalendarEvent, edge: 'top' | 'bottom', e: React.MouseEvent) => {
     e.stopPropagation();
     setResizingEvent({
@@ -681,14 +749,21 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                     {/* Current time indicator - only show on today */}
                     <CurrentTimeIndicator show={isSameDay(currentDate, new Date())} />
                     
-                    {/* Timed Events */}
-                    {getTimedEventsForDay(currentDate).map(event => {
+                    {/* Timed Events - with overlap layout */}
+                    {getEventsWithLayout(getTimedEventsForDay(currentDate)).map(({ event, layout }) => {
                       const colorStyle = getEventColorStyle(event);
+                      const widthPercent = 100 / layout.totalColumns;
+                      const leftPercent = layout.column * widthPercent;
                       return (
                         <div
                           key={event.id}
-                          className="absolute left-1 right-1 rounded border-l-2 group cursor-grab overflow-visible"
-                          style={{ ...getEventStyle(event), ...colorStyle.style }}
+                          className="absolute rounded border-l-2 group cursor-grab overflow-visible"
+                          style={{ 
+                            ...getEventStyle(event), 
+                            ...colorStyle.style,
+                            left: `${leftPercent}%`,
+                            width: `${widthPercent - 1}%`,
+                          }}
                           onMouseDown={(e) => startEventDrag(event, e)}
                           onClick={(e) => handleEventClick(event, e)}
                         >
@@ -806,14 +881,21 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                         {/* Current time indicator - only show on today */}
                         <CurrentTimeIndicator show={isSameDay(day, new Date())} />
                         
-                        {/* Timed Events */}
-                        {getTimedEventsForDay(day).map(event => {
+                        {/* Timed Events - with overlap layout */}
+                        {getEventsWithLayout(getTimedEventsForDay(day)).map(({ event, layout }) => {
                           const colorStyle = getEventColorStyle(event);
+                          const widthPercent = 100 / layout.totalColumns;
+                          const leftPercent = layout.column * widthPercent;
                           return (
                             <div
                               key={event.id}
-                              className="absolute left-0.5 right-0.5 rounded text-xs border-l-2 overflow-visible group cursor-grab"
-                              style={{ ...getEventStyle(event), ...colorStyle.style }}
+                              className="absolute rounded text-xs border-l-2 overflow-visible group cursor-grab"
+                              style={{ 
+                                ...getEventStyle(event), 
+                                ...colorStyle.style,
+                                left: `${leftPercent}%`,
+                                width: `${widthPercent - 1}%`,
+                              }}
                               title={event.title}
                               onMouseDown={(e) => startEventDrag(event, e)}
                               onClick={(e) => handleEventClick(event, e)}
