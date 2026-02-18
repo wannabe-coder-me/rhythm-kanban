@@ -559,7 +559,7 @@ function TableViewContent() {
                         updateTask(task.id, { dueDate: null });
                       }
                     }}
-                    className="bg-transparent border-none text-xs text-slate-300 focus:outline-none cursor-pointer hover:text-white [color-scheme:dark]"
+                    className="bg-transparent border-none text-xs text-slate-300 focus:outline-none cursor-pointer hover:text-white [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:w-3 [&::-webkit-calendar-picker-indicator]:h-3 [&::-webkit-calendar-picker-indicator]:opacity-60 [&::-webkit-calendar-picker-indicator]:hover:opacity-100"
                   />
                 </td>
                 <td className="px-3 py-1">
