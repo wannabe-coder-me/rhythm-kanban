@@ -546,7 +546,13 @@ function TableViewContent() {
                   </select>
                 </td>
                 <td className="px-3 py-1">
-                  <div className="flex items-center gap-1">
+                  <label className="flex items-center gap-1 cursor-pointer group">
+                    <span className="text-xs text-slate-300 group-hover:text-white">
+                      {task.dueDate ? format(new Date(task.dueDate), "MM/dd/yyyy") : "mm/dd/yyyy"}
+                    </span>
+                    <svg className="w-3 h-3 text-slate-500 group-hover:text-slate-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
                     <input
                       type="date"
                       value={task.dueDate ? format(new Date(task.dueDate), "yyyy-MM-dd") : ""}
@@ -560,12 +566,9 @@ function TableViewContent() {
                           updateTask(task.id, { dueDate: null });
                         }
                       }}
-                      className="table-date-input bg-transparent border-none text-xs text-slate-300 focus:outline-none cursor-pointer hover:text-white [color-scheme:dark]"
+                      className="sr-only"
                     />
-                    <svg className="w-3 h-3 text-slate-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
+                  </label>
                 </td>
                 <td className="px-3 py-1">
                   <select
