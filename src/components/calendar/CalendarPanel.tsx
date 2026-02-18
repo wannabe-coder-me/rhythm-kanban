@@ -454,12 +454,17 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
       },
     });
 
-    const handleClick = () => {
+    const handleClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      // Don't open modal if we're dragging
+      if (draggingEvent || resizingEvent) return;
+      
       const start = new Date(day);
       start.setHours(hour, 0, 0, 0);
       const end = addHours(start, 1);
       setNewEventData({ start, end });
       setNewEventTitle('');
+      setNewEventColorId('9'); // Default blue
       setNewEventRecurrence('none');
       setShowCreateModal(true);
     };
@@ -469,9 +474,9 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
     return (
       <div
         ref={setNodeRef}
-        onClick={handleClick}
+        onClick={(e) => handleClick(e)}
         style={{ height: `${height}px` }}
-        className={`border-b border-white/5 cursor-pointer ${
+        className={`border-b border-white/5 cursor-pointer hover:bg-white/5 ${
           isOver ? 'bg-violet-500/20' : ''
         }`}
       />
