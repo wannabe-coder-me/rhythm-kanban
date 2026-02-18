@@ -415,7 +415,7 @@ function TableViewContent() {
                   type="checkbox"
                   checked={selectedTasks.size === sortedTasks.length && sortedTasks.length > 0}
                   onChange={toggleSelectAll}
-                  className="w-[11px] h-[11px] rounded-sm border-slate-600 bg-slate-700 text-indigo-500 focus:ring-0"
+                  className="table-checkbox w-[11px] h-[11px] rounded-sm border-slate-600 bg-slate-700 text-indigo-500 focus:ring-0"
                 />
               </th>
               <th
@@ -485,7 +485,7 @@ function TableViewContent() {
                     type="checkbox"
                     checked={selectedTasks.has(task.id)}
                     onChange={() => toggleSelect(task.id)}
-                    className="w-[11px] h-[11px] rounded-sm border-slate-600 bg-slate-700 text-indigo-500 focus:ring-0"
+                    className="table-checkbox w-[11px] h-[11px] rounded-sm border-slate-600 bg-slate-700 text-indigo-500 focus:ring-0"
                   />
                 </td>
                 <td className="px-3 py-1">

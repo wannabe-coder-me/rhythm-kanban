@@ -173,7 +173,14 @@ li a {
   outline: none;
 }
 
-/* Table view date input - hide native calendar icon */
+/* Table view - compact controls */
+.table-checkbox {
+  min-height: 12px !important;
+  min-width: 12px !important;
+  width: 12px !important;
+  height: 12px !important;
+}
+
 .table-date-input {
   min-height: auto !important;
   min-width: auto !important;
