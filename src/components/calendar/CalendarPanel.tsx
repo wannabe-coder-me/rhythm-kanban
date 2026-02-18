@@ -454,19 +454,24 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
       },
     });
 
-    const handleClick = (e: React.MouseEvent) => {
+    const handleSlotClick = (e: React.MouseEvent) => {
       e.stopPropagation();
-      // Don't open modal if we're dragging
+      e.preventDefault();
+      // Don't open modal if we're dragging or resizing
       if (draggingEvent || resizingEvent) return;
       
       const start = new Date(day);
       start.setHours(hour, 0, 0, 0);
       const end = addHours(start, 1);
-      setNewEventData({ start, end });
+      
+      // Set all modal state at once
       setNewEventTitle('');
-      setNewEventColorId('9'); // Default blue
+      setNewEventColorId('9');
       setNewEventRecurrence('none');
-      setShowCreateModal(true);
+      setNewEventData({ start, end });
+      
+      // Small delay to ensure state is set before showing modal
+      setTimeout(() => setShowCreateModal(true), 0);
     };
 
     const height = getHourHeight(hour);
@@ -474,9 +479,9 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
     return (
       <div
         ref={setNodeRef}
-        onClick={(e) => handleClick(e)}
+        onMouseUp={handleSlotClick}
         style={{ height: `${height}px` }}
-        className={`border-b border-white/5 cursor-pointer hover:bg-white/5 ${
+        className={`border-b border-white/5 cursor-pointer hover:bg-white/5 transition-colors ${
           isOver ? 'bg-violet-500/20' : ''
         }`}
       />
@@ -635,7 +640,7 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                     ))}
                   </div>
                   
-                  {/* Time slots */}
+                  {/* Time slots and events */}
                   <div className="ml-12 relative">
                     {HOURS.map(hour => (
                       <TimeSlot key={hour} day={currentDate} hour={hour} />
