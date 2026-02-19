@@ -3,8 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createAndEmitActivity } from "@/lib/activity";
-import { writeFile, mkdir, unlink } from "fs/promises";
-import { join } from "path";
+import { uploadToR2, deleteFromR2, getR2KeyFromUrl } from "@/lib/r2";
 import { v4 as uuid } from "uuid";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -117,27 +116,22 @@ export async function POST(
   }
 
   try {
-    // Create upload directory for this task
-    const uploadDir = join(process.cwd(), "public", "uploads", taskId);
-    await mkdir(uploadDir, { recursive: true });
-
-    // Generate unique filename
+    // Generate unique key for R2
     const fileId = uuid();
     const safeFilename = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-    const storedFilename = `${fileId}-${safeFilename}`;
-    const filePath = join(uploadDir, storedFilename);
+    const r2Key = `attachments/${taskId}/${fileId}-${safeFilename}`;
 
-    // Write file to disk
+    // Read file and upload to R2
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    await writeFile(filePath, buffer);
+    const url = await uploadToR2(r2Key, buffer, file.type);
 
     // Save to database
     const attachment = await prisma.attachment.create({
       data: {
         taskId,
         filename: file.name,
-        url: `/uploads/${taskId}/${storedFilename}`,
+        url,
         mimeType: file.type,
         size: file.size,
         uploadedById: session.user.id,
@@ -205,12 +199,14 @@ export async function DELETE(
   }
 
   try {
-    // Delete file from disk
-    const filePath = join(process.cwd(), "public", attachment.url);
-    try {
-      await unlink(filePath);
-    } catch {
-      // File may already be deleted, continue anyway
+    // Delete file from R2
+    const r2Key = getR2KeyFromUrl(attachment.url);
+    if (r2Key) {
+      try {
+        await deleteFromR2(r2Key);
+      } catch {
+        // File may already be deleted, continue anyway
+      }
     }
 
     // Delete from database
