@@ -85,6 +85,35 @@ rhythm-kanban/
 - **Delete events**: Hover to reveal delete button
 - **Week starts Monday**: Business-friendly week layout
 - **Variable row heights**: Business hours (6am-6pm) = 48px, off-hours = 20px
+- **Time slot highlighting**: Both cell and hour label highlight when dragging tasks
+
+### Drag-to-Calendar Highlighting
+
+When dragging a task to the calendar, both the time slot and the hour label highlight:
+
+**State Management:**
+- `hoveredHour` - set via `onMouseEnter`/`onMouseLeave` (normal hover)
+- `dropTargetHour` - set via dnd-kit's `isOver` in TimeSlot component (drag hover)
+
+**Implementation:**
+```tsx
+// TimeSlot component
+const { setNodeRef, isOver } = useDroppable({ id: slotId, data: { type: 'calendar-slot', day, hour } });
+
+useEffect(() => {
+  if (isOver) {
+    setDropTargetHour(hour);
+  }
+}, [isOver, hour]);
+
+// Time labels check both states
+const isHighlighted = hoveredHour === hour || dropTargetHour === hour;
+```
+
+**Task Position Safety:**
+- `ActiveDrag` tracks `originalColumnId` when drag starts
+- If task crosses other columns during drag and drops on calendar, it reverts to original column
+- Prevents accidental task movement when drag path crosses kanban columns
 
 ### Architecture
 ```
