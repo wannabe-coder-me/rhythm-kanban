@@ -73,6 +73,7 @@ function BoardPageContent() {
   const [calendarRefreshKey, setCalendarRefreshKey] = useState(0);
   const [showArchived, setShowArchived] = useState(false);
   const [pendingCalendarTask, setPendingCalendarTask] = useState<{ id: string; title: string; start: Date; end: Date } | null>(null);
+  const [scheduledTaskIds, setScheduledTaskIds] = useState<Set<string>>(new Set());
   const { toasts, addToast, dismissToast } = useToasts();
   const { isOpen: isCalendarOpen, toggleCalendar, closeCalendar, createEvent, updateEvent, deleteEvent, width: calendarWidth, handleWidthChange: handleCalendarWidthChange } = useCalendar();
   
@@ -1179,6 +1180,7 @@ function BoardPageContent() {
                   onDeleteColumn={() => handleDeleteColumn(column.id)}
                   onToggleSubtask={handleToggleSubtask}
                   selectedTaskId={selectedTaskId}
+                  scheduledTaskIds={scheduledTaskIds}
                 />
               ))}
 
@@ -1267,6 +1269,9 @@ function BoardPageContent() {
               try {
                 await updateEvent(eventId, updates);
                 setCalendarRefreshKey(k => k + 1);
+                if (taskId) {
+                  setScheduledTaskIds(prev => new Set([...prev, taskId]));
+                }
               } catch (error) {
                 addToast("Failed to update event", "error");
               }
@@ -1291,6 +1296,9 @@ function BoardPageContent() {
                 });
                 if (!res.ok) throw new Error('Failed to create event');
                 setCalendarRefreshKey(k => k + 1);
+                if (taskId) {
+                  setScheduledTaskIds(prev => new Set([...prev, taskId]));
+                }
               } catch (error) {
                 addToast("Failed to create calendar event", "error");
               }

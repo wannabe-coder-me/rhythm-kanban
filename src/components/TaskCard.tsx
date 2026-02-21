@@ -14,6 +14,7 @@ interface TaskCardProps {
   onClick: () => void;
   onToggleSubtask?: (subtaskId: string, completed: boolean) => void;
   isSelected?: boolean;
+  isScheduled?: boolean;
 }
 
 const priorityColors: Record<Priority, string> = {
@@ -30,7 +31,7 @@ const priorityBorders: Record<Priority, string> = {
   urgent: "border-l-red-500",
 };
 
-export function TaskCard({ task, onClick, onToggleSubtask, isSelected = false }: TaskCardProps) {
+export function TaskCard({ task, onClick, onToggleSubtask, isSelected = false, isScheduled = false }: TaskCardProps) {
   const [subtasksExpanded, setSubtasksExpanded] = useState(false);
   
   const {
@@ -84,12 +85,22 @@ export function TaskCard({ task, onClick, onToggleSubtask, isSelected = false }:
         className={clsx(
           "bg-slate-700 hover:bg-slate-650 border border-slate-600 rounded-lg p-2 cursor-pointer transition-all",
           "border-l-4",
-          priorityBorders[task.priority as Priority],
+          isScheduled ? "border-l-orange-500" : priorityBorders[task.priority as Priority],
+          isScheduled && "bg-orange-500/10 border-orange-500/30",
           isDragging && "opacity-50 shadow-2xl rotate-2",
           isSelected && "ring-2 ring-indigo-500 ring-offset-2 ring-offset-slate-800",
           isBlocked && "opacity-70 bg-slate-700/80"
         )}
       >
+        {/* Scheduled indicator */}
+        {isScheduled && (
+          <div className="flex items-center gap-1.5 text-orange-400 text-xs mb-1" title="Scheduled on calendar">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <span>Scheduled</span>
+          </div>
+        )}
         {/* Blocked indicator */}
         {isBlocked && (
           <div className="flex items-center gap-1.5 text-amber-400 text-xs mb-1" title={`Blocked by ${blockedByCount} task${blockedByCount > 1 ? 's' : ''}`}>

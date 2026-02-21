@@ -28,6 +28,9 @@ export default function HomePage() {
   const [newBoardDesc, setNewBoardDesc] = useState("");
   const [creating, setCreating] = useState(false);
   const [taskSummary, setTaskSummary] = useState<TaskSummary | null>(null);
+  const [boardMenuOpen, setBoardMenuOpen] = useState<string | null>(null);
+  const [deletingBoard, setDeletingBoard] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<Board | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -96,6 +99,27 @@ export default function HomePage() {
       alert("Failed to create board. Check console for details.");
     } finally {
       setCreating(false);
+    }
+  };
+
+  const deleteBoard = async (board: Board) => {
+    setDeletingBoard(board.id);
+    try {
+      const res = await fetch(`/api/boards/${board.id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setBoards(boards.filter(b => b.id !== board.id));
+        setConfirmDelete(null);
+      } else {
+        const error = await res.json();
+        alert(`Failed to delete board: ${error.error || res.statusText}`);
+      }
+    } catch (error) {
+      console.error("Failed to delete board:", error);
+      alert("Failed to delete board. Check console for details.");
+    } finally {
+      setDeletingBoard(null);
     }
   };
 
@@ -236,18 +260,56 @@ export default function HomePage() {
             {boards.map((board) => (
               <div
                 key={board.id}
-                onClick={() => router.push(`/boards/${board.id}`)}
-                className="bg-slate-800 hover:bg-slate-750 border border-slate-700 rounded-lg p-5 cursor-pointer transition-all hover:border-indigo-500/50 group"
+                className="bg-slate-800 hover:bg-slate-750 border border-slate-700 rounded-lg p-5 transition-all hover:border-indigo-500/50 group relative"
               >
-                <h3 className="font-semibold text-white group-hover:text-indigo-400 transition-colors">
-                  {board.name}
-                </h3>
-                {board.description && (
-                  <p className="text-slate-400 text-sm mt-1 line-clamp-2">{board.description}</p>
-                )}
-                <p className="text-slate-500 text-xs mt-3">
-                  Created {new Date(board.createdAt).toLocaleDateString()}
-                </p>
+                {/* Board Menu */}
+                <div className="absolute top-3 right-3">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setBoardMenuOpen(boardMenuOpen === board.id ? null : board.id);
+                    }}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 opacity-0 group-hover:opacity-100 transition-all"
+                  >
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                      <circle cx="12" cy="6" r="2" />
+                      <circle cx="12" cy="12" r="2" />
+                      <circle cx="12" cy="18" r="2" />
+                    </svg>
+                  </button>
+                  {boardMenuOpen === board.id && (
+                    <div className="absolute right-0 top-8 bg-slate-700 border border-slate-600 rounded-lg shadow-xl py-1 min-w-[140px] z-10">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setBoardMenuOpen(null);
+                          setConfirmDelete(board);
+                        }}
+                        className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-slate-600 flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Delete Board
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div
+                  onClick={() => router.push(`/boards/${board.id}`)}
+                  className="cursor-pointer"
+                >
+                  <h3 className="font-semibold text-white group-hover:text-indigo-400 transition-colors pr-8">
+                    {board.name}
+                  </h3>
+                  {board.description && (
+                    <p className="text-slate-400 text-sm mt-1 line-clamp-2">{board.description}</p>
+                  )}
+                  <p className="text-slate-500 text-xs mt-3">
+                    Created {new Date(board.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
               </div>
             ))}
           </div>
@@ -381,6 +443,47 @@ export default function HomePage() {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-xl p-6 w-full max-w-md shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center">
+                <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-white">Delete Board</h3>
+                <p className="text-sm text-slate-400">This action cannot be undone</p>
+              </div>
+            </div>
+            
+            <p className="text-slate-300 mb-6">
+              Are you sure you want to delete <span className="font-semibold text-white">&quot;{confirmDelete.name}&quot;</span>? 
+              All tasks, columns, and comments will be permanently removed.
+            </p>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setConfirmDelete(null)}
+                className="px-4 py-2 text-slate-400 hover:text-white transition-colors"
+                disabled={deletingBoard === confirmDelete.id}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => deleteBoard(confirmDelete)}
+                disabled={deletingBoard === confirmDelete.id}
+                className="bg-red-600 hover:bg-red-500 disabled:bg-red-600/50 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+              >
+                {deletingBoard === confirmDelete.id ? "Deleting..." : "Delete Board"}
+              </button>
+            </div>
           </div>
         </div>
       )}

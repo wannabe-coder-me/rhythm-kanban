@@ -22,6 +22,7 @@ interface ColumnProps {
   onDeleteColumn?: () => void;
   onToggleSubtask?: (subtaskId: string, completed: boolean) => void;
   selectedTaskId?: string | null;
+  scheduledTaskIds?: Set<string>;
 }
 
 export function Column({
@@ -34,6 +35,7 @@ export function Column({
   onDeleteColumn,
   onToggleSubtask,
   selectedTaskId,
+  scheduledTaskIds = new Set(),
 }: ColumnProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -187,6 +189,7 @@ export function Column({
               onClick={() => onTaskClick(task)}
               onToggleSubtask={onToggleSubtask}
               isSelected={selectedTaskId === task.id}
+              isScheduled={scheduledTaskIds.has(task.id)}
             />
           ))}
         </SortableContext>
