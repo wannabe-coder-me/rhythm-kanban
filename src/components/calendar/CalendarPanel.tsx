@@ -104,6 +104,9 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
   const [newEventRecurrence, setNewEventRecurrence] = useState<'none' | 'daily' | 'weekly' | 'monthly'>('none');
   const [newEventColorId, setNewEventColorId] = useState<string>('4'); // Default orange
   
+  // Hovered hour tracking for highlighting
+  const [hoveredHour, setHoveredHour] = useState<number | null>(null);
+  
   // Color options for picker
   const colorOptions = [
     { id: '1', name: 'Purple', color: '#9c78b4' },
@@ -585,6 +588,8 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
       <div
         ref={setNodeRef}
         onMouseUp={handleSlotClick}
+        onMouseEnter={() => setHoveredHour(hour)}
+        onMouseLeave={() => setHoveredHour(null)}
         style={{ height: `${height}px` }}
         className={`border-b border-white/5 cursor-pointer hover:bg-white/5 transition-colors ${
           isOver ? 'bg-violet-500/20' : ''
@@ -731,14 +736,18 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                 {/* Time grid */}
                 <div className="relative flex-1 overflow-auto">
                   {/* Time labels */}
-                  <div className="absolute left-0 top-0 w-12 bg-[#0f0f1a] z-10">
+                  <div className="absolute left-0 top-0 w-14 bg-[#0f0f1a] z-10">
                     {HOURS.map(hour => (
                       <div 
                         key={hour} 
                         style={{ height: `${getHourHeight(hour)}px` }}
-                        className="flex items-start justify-end pr-2 pt-1"
+                        className={`flex items-start justify-end pr-2 pt-1 transition-colors ${
+                          hoveredHour === hour ? 'bg-violet-500/30' : ''
+                        }`}
                       >
-                        <span className="text-xs font-medium text-white/70">
+                        <span className={`text-sm font-semibold transition-colors ${
+                          hoveredHour === hour ? 'text-violet-300' : 'text-white/70'
+                        }`}>
                           {hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`}
                         </span>
                       </div>
@@ -746,7 +755,7 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                   </div>
                   
                   {/* Time slots and events */}
-                  <div className="ml-12 relative">
+                  <div className="ml-14 relative">
                     {HOURS.map(hour => (
                       <TimeSlot key={hour} day={currentDate} hour={hour} />
                     ))}
@@ -849,15 +858,19 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                 {/* Time grid */}
                 <div className="flex flex-1 overflow-auto">
                   {/* Time labels */}
-                  <div className="w-12 flex-shrink-0 bg-[#0f0f1a]">
+                  <div className="w-14 flex-shrink-0 bg-[#0f0f1a]">
                     <div className="h-8" /> {/* Header spacer */}
                     {HOURS.map(hour => (
                       <div 
                         key={hour} 
                         style={{ height: `${getHourHeight(hour)}px` }}
-                        className="flex items-start justify-end pr-2 pt-1"
+                        className={`flex items-start justify-end pr-2 pt-1 transition-colors ${
+                          hoveredHour === hour ? 'bg-violet-500/30' : ''
+                        }`}
                       >
-                        <span className="text-[11px] font-medium text-white/70">
+                        <span className={`text-xs font-semibold transition-colors ${
+                          hoveredHour === hour ? 'text-violet-300' : 'text-white/70'
+                        }`}>
                           {hour === 0 ? '12a' : hour < 12 ? `${hour}a` : hour === 12 ? '12p' : `${hour - 12}p`}
                         </span>
                       </div>
