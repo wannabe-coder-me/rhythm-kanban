@@ -84,6 +84,12 @@ export interface Task {
   recurrenceEnd: Date | null;
   lastRecurrence: Date | null;
   parentRecurringId: string | null;
+  // Life System fields
+  northStarId?: string | null;
+  energyLevel?: string | null;
+  timeEstimate?: number | null;
+  archived?: boolean;
+  archivedAt?: Date | null;
   // Relations
   assignee?: User | null;
   createdBy?: User;
@@ -97,6 +103,7 @@ export interface Task {
   blockedBy?: TaskDependency[];
   blocking?: TaskDependency[];
   customFieldValues?: CustomFieldValue[];
+  northStar?: NorthStar | null;
   _count?: { attachments?: number; recurringInstances?: number; blockedBy?: number };
 }
 

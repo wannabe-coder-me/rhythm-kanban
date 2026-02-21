@@ -131,7 +131,7 @@ export default function NorthStarPage() {
               MY NORTH STAR {new Date().getFullYear()}
             </h1>
             <p className="text-white/50 italic">
-              "Read with EMOTION every morning and evening"
+              &ldquo;Read with EMOTION every morning and evening&rdquo;
             </p>
           </div>
 
@@ -180,7 +180,7 @@ export default function NorthStarPage() {
 
           <div className="mt-6 pt-6 border-t border-white/10 text-center">
             <p className="text-white/40 text-sm">
-              💡 "Feel it as if already achieved. The mind cannot tell imagination from reality."
+              💡 &ldquo;Feel it as if already achieved. The mind cannot tell imagination from reality.&rdquo;
             </p>
           </div>
         </div>

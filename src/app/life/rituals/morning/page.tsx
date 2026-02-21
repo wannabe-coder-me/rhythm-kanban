@@ -196,7 +196,7 @@ export default function MorningRitualPage() {
       <main className="relative max-w-3xl mx-auto px-6 py-8">
         {/* Inspirational Quote */}
         <div className="text-center mb-8 p-6 bg-white/5 rounded-2xl border border-white/10">
-          <p className="text-xl text-white/90 italic mb-2">"{quote.quote}"</p>
+          <p className="text-xl text-white/90 italic mb-2">&ldquo;{quote.quote}&rdquo;</p>
           <p className="text-amber-400">— {quote.author}</p>
         </div>
 
@@ -207,7 +207,7 @@ export default function MorningRitualPage() {
               <div className="text-6xl mb-4">🙏</div>
               <h2 className="text-2xl font-bold text-white mb-2">Start with Gratitude</h2>
               <p className="text-white/60">
-                What are 5 things you're grateful for today?
+                What are 5 things you&apos;re grateful for today?
               </p>
             </div>
 
@@ -245,7 +245,7 @@ export default function MorningRitualPage() {
               <div className="text-6xl mb-4">💪</div>
               <h2 className="text-2xl font-bold text-white mb-2">Celebrate Your Wins</h2>
               <p className="text-white/60">
-                What are 5 things you're personally proud of?
+                What are 5 things you&apos;re personally proud of?
               </p>
             </div>
 
@@ -323,8 +323,8 @@ export default function MorningRitualPage() {
               {northStars.length > 0 && (
                 <div className="mt-6 p-4 bg-white/5 rounded-xl text-center">
                   <p className="text-white/60 text-sm italic">
-                    💡 "The mind cannot tell imagination from reality. 
-                    Visualize achieving each goal with deep emotion."
+                    💡 &ldquo;The mind cannot tell imagination from reality. 
+                    Visualize achieving each goal with deep emotion.&rdquo;
                   </p>
                 </div>
               )}
@@ -361,8 +361,8 @@ export default function MorningRitualPage() {
 
             <div className="mt-4 p-4 bg-blue-500/10 rounded-xl border border-blue-400/20">
               <p className="text-blue-300 text-sm">
-                💡 <strong>Pro tip:</strong> Write in present tense. "I am" not "I will be". 
-                Your subconscious doesn't understand future tense.
+                💡 <strong>Pro tip:</strong> Write in present tense. &ldquo;I am&rdquo; not &ldquo;I will be&rdquo;. 
+                Your subconscious doesn&apos;t understand future tense.
               </p>
             </div>
 
@@ -383,14 +383,14 @@ export default function MorningRitualPage() {
               <div className="text-8xl mb-4 animate-bounce">🌟</div>
               <h2 className="text-3xl font-bold text-white mb-2">Ritual Complete!</h2>
               <p className="text-white/60 text-lg">
-                You've programmed your mind for success today.
+                You&apos;ve programmed your mind for success today.
               </p>
             </div>
 
             <div className="bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-2xl p-8 border border-amber-400/20 mb-8">
               <div className="text-6xl mb-4">🔥</div>
               <p className="text-2xl font-bold text-amber-400 mb-2">
-                You're on fire!
+                You&apos;re on fire!
               </p>
               <p className="text-white/60">
                 Consistency compounds. Come back tomorrow morning.

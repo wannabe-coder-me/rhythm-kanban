@@ -188,7 +188,7 @@ export default function EveningRitualPage() {
       <main className="relative max-w-3xl mx-auto px-6 py-8">
         {/* Inspirational Quote */}
         <div className="text-center mb-8 p-6 bg-white/5 rounded-2xl border border-white/10">
-          <p className="text-xl text-white/90 italic mb-2">"{quote.quote}"</p>
+          <p className="text-xl text-white/90 italic mb-2">&ldquo;{quote.quote}&rdquo;</p>
           <p className="text-indigo-400">— {quote.author}</p>
         </div>
 
@@ -282,8 +282,8 @@ export default function EveningRitualPage() {
               
               <div className="mt-6 p-4 bg-white/5 rounded-xl text-center">
                 <p className="text-white/60 text-sm italic">
-                  🌙 "Your subconscious works while you sleep. 
-                  Plant these goals deep as you drift off."
+                  🌙 &ldquo;Your subconscious works while you sleep. 
+                  Plant these goals deep as you drift off.&rdquo;
                 </p>
               </div>
             </div>
@@ -349,7 +349,7 @@ Tomorrow's top priorities:
             <div className="bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-2xl p-8 border border-indigo-400/20 mb-8">
               <div className="text-5xl mb-4">✨</div>
               <p className="text-xl text-white/90 italic mb-4">
-                "While you sleep, your subconscious works on your dreams."
+                &ldquo;While you sleep, your subconscious works on your dreams.&rdquo;
               </p>
               <p className="text-indigo-400">
                 See you tomorrow morning! ☀️

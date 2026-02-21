@@ -120,11 +120,11 @@ export default function RitualsPage() {
               <div className="space-y-2 mb-6 text-sm text-white/50">
                 <div className="flex items-center gap-2">
                   <span className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center text-xs">1</span>
-                  <span>5 things you're grateful for</span>
+                  <span>5 things you&apos;re grateful for</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center text-xs">2</span>
-                  <span>5 things you're proud of</span>
+                  <span>5 things you&apos;re proud of</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center text-xs">3</span>
@@ -230,10 +230,10 @@ export default function RitualsPage() {
         {/* Quote */}
         <div className="mt-12 text-center p-8 bg-white/5 rounded-2xl border border-white/10">
           <p className="text-xl text-white/80 italic mb-2">
-            "The subconscious mind works 24/7. Feed it well in the morning, 
-            reinforce at night, and watch your life transform."
+            &ldquo;The subconscious mind works 24/7. Feed it well in the morning, 
+            reinforce at night, and watch your life transform.&rdquo;
           </p>
-          <p className="text-violet-400">— The Navigator's Way</p>
+          <p className="text-violet-400">— The Navigator&apos;s Way</p>
         </div>
 
         {/* Stats */}

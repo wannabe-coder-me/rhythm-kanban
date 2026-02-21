@@ -78,10 +78,10 @@ export default function LifeDashboardPage() {
             Welcome to the Life System
           </h1>
           <p className="text-white/60 mb-8">
-            "What the mind can conceive and believe, it can achieve."
+            &ldquo;What the mind can conceive and believe, it can achieve.&rdquo;
           </p>
           <p className="text-white/80 mb-8">
-            Let's set up your vision and North Star goals. This will take about 5 minutes.
+            Let&apos;s set up your vision and North Star goals. This will take about 5 minutes.
           </p>
           <Link
             href="/life/onboarding"
@@ -123,7 +123,7 @@ export default function LifeDashboardPage() {
             {getGreeting()}, {firstName}
           </h1>
           <p className="text-white/50 italic">
-            "Dream. Believe. Achieve."
+            &ldquo;Dream. Believe. Achieve.&rdquo;
           </p>
         </div>
 
@@ -161,7 +161,7 @@ export default function LifeDashboardPage() {
 
           {/* Today's Focus */}
           <div className="lg:col-span-2 bg-[#1a1a2e] rounded-2xl p-6 border border-white/10">
-            <h2 className="text-lg font-semibold text-white mb-4">Today's Focus</h2>
+            <h2 className="text-lg font-semibold text-white mb-4">Today&apos;s Focus</h2>
             
             {/* Rituals */}
             <div className="space-y-3 mb-6">

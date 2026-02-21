@@ -176,7 +176,7 @@ export default function VisionBoardPage() {
       <main className="max-w-7xl mx-auto px-6 py-8">
         {/* Subtitle */}
         <p className="text-white/50 italic mb-6">
-          "No justification needed. I want it because I want it."
+          &ldquo;No justification needed. I want it because I want it.&rdquo;
         </p>
 
         {/* Filters */}
