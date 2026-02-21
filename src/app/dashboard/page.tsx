@@ -203,6 +203,13 @@ export default function DashboardPage() {
           </div>
           <div className="flex items-center gap-4">
             <Link
+              href="/life"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 hover:text-violet-200 transition-colors"
+            >
+              <span className="text-base">🧭</span>
+              <span className="text-sm font-medium">Life System</span>
+            </Link>
+            <Link
               href="/my-tasks"
               className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
             >
