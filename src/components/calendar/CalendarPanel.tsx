@@ -1013,8 +1013,26 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
               </button>
               <button
                 onClick={async () => {
-                  if (newEventTitle.trim() && onEventCreate) {
+                  console.log('[CalendarPanel] Create clicked', { 
+                    title: newEventTitle, 
+                    hasCallback: !!onEventCreate,
+                    eventData: newEventData 
+                  });
+                  
+                  if (!newEventData) {
+                    alert('Error: No event data. Please try again.');
+                    return;
+                  }
+                  
+                  if (!onEventCreate) {
+                    alert('Error: Calendar not properly connected. Please refresh the page.');
+                    console.error('[CalendarPanel] onEventCreate callback is not defined');
+                    return;
+                  }
+                  
+                  if (newEventTitle.trim()) {
                     try {
+                      console.log('[CalendarPanel] Calling onEventCreate...');
                       await onEventCreate({
                         taskId: newEventData.taskId,
                         title: newEventTitle,
@@ -1023,14 +1041,13 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                         colorId: newEventColorId,
                         recurrence: newEventRecurrence !== 'none' ? { frequency: newEventRecurrence } : undefined,
                       });
+                      console.log('[CalendarPanel] Event created successfully');
                       setShowCreateModal(false);
                       onPendingTaskHandled?.();
                     } catch (error) {
                       console.error('[CalendarPanel] Failed to create event:', error);
-                      // Don't close modal on error so user can retry
+                      alert('Failed to create event: ' + (error instanceof Error ? error.message : 'Unknown error'));
                     }
-                  } else if (!onEventCreate) {
-                    console.error('[CalendarPanel] onEventCreate callback is not defined');
                   }
                 }}
                 disabled={!newEventTitle.trim()}
