@@ -1269,9 +1269,6 @@ function BoardPageContent() {
               try {
                 await updateEvent(eventId, updates);
                 setCalendarRefreshKey(k => k + 1);
-                if (taskId) {
-                  setScheduledTaskIds(prev => new Set([...prev, taskId]));
-                }
               } catch (error) {
                 addToast("Failed to update event", "error");
               }
