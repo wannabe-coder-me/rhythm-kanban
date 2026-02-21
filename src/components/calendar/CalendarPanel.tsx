@@ -511,13 +511,18 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
   };
 
   const getEventColorStyle = (event: CalendarEvent) => {
-    // If linked to a task, use task priority color
+    // If event has an explicit color set, use that (user's choice takes priority)
+    if (event.color) {
+      const color = getGoogleEventColor(event.color);
+      return { style: { backgroundColor: color.bg, borderLeftColor: color.border } };
+    }
+    // Otherwise if linked to a task, use task priority color
     if (event.task?.priority) {
       const color = getPriorityColorStyle(event.task.priority);
       return { style: { backgroundColor: color.bg, borderLeftColor: color.border } };
     }
-    // Otherwise use Google Calendar color (mapped to soft palette)
-    const color = getGoogleEventColor(event.color);
+    // Fallback to default color
+    const color = getGoogleEventColor('4'); // Default orange
     return { style: { backgroundColor: color.bg, borderLeftColor: color.border } };
   };
 
