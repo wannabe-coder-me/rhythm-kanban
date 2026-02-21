@@ -31,6 +31,15 @@ model User {
   tasksCreated        Task[]               @relation("TaskCreator")
   taskDependencies    TaskDependency[]
   taskTemplates       TaskTemplate[]
+  
+  // Life System relations
+  visions             Vision[]
+  northStars          NorthStar[]
+  ritualEntries       RitualEntry[]
+  identities          Identity[]
+  lifeScores          LifeScore[]
+  weeklyReviews       WeeklyReview[]
+  lifeSettings        LifeSettings?
 }
 
 model Notification {
@@ -172,6 +181,12 @@ model Task {
   recurrenceEnd      DateTime?
   lastRecurrence     DateTime?
   parentRecurringId  String?
+  
+  // Life System - link to North Star goal
+  northStarId        String?
+  energyLevel        String?            // 'high', 'medium', 'low'
+  timeEstimate       Int?               // minutes
+  
   activities         Activity[]
   attachments        Attachment[]
   calendarEvents     CalendarEvent[]
@@ -187,6 +202,9 @@ model Task {
   blocking           TaskDependency[]   @relation("BlockingTask")
   blockedBy          TaskDependency[]   @relation("BlockedTask")
   labels             Label[]            @relation("TaskLabels")
+  northStar          NorthStar?         @relation("TaskNorthStar", fields: [northStarId], references: [id], onDelete: SetNull)
+  
+  @@index([northStarId])
 }
 
 model TaskDependency {
@@ -337,4 +355,242 @@ model CalendarEvent {
   @@unique([calendarConnectionId, externalEventId])
   @@index([taskId])
   @@index([startTime, endTime])
+}
+
+// ============================================
+// LIFE SYSTEM MODELS
+// ============================================
+
+enum Pillar {
+  HEALTH
+  WEALTH
+  RELATIONSHIPS
+  CAREER
+  SPIRITUAL
+  CONTRIBUTION
+}
+
+enum TimeHorizon {
+  ONE_YEAR
+  THREE_YEAR
+  FIVE_YEAR
+  SOMEDAY
+}
+
+// Vision - Dreams without limits
+model Vision {
+  id          String      @id @default(uuid())
+  userId      String
+  pillar      Pillar
+  title       String
+  description String?     @db.Text
+  imageUrl    String?
+  horizon     TimeHorizon @default(SOMEDAY)
+  order       Int         @default(0)
+  archived    Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, pillar])
+}
+
+// North Star - 12-month focus goals
+model NorthStar {
+  id          String    @id @default(uuid())
+  userId      String
+  pillar      Pillar
+  title       String
+  description String?   @db.Text
+  targetDate  DateTime?
+  progress    Int       @default(0)
+  active      Boolean   @default(true)
+  achieved    Boolean   @default(false)
+  achievedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  milestones  Milestone[]
+  actions     Task[]    @relation("TaskNorthStar")
+
+  @@index([userId, pillar, active])
+  @@index([userId])
+}
+
+// Milestone - Checkpoints toward North Star
+model Milestone {
+  id          String    @id @default(uuid())
+  northStarId String
+  title       String
+  targetDate  DateTime?
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
+
+  northStar   NorthStar @relation(fields: [northStarId], references: [id], onDelete: Cascade)
+
+  @@index([northStarId])
+}
+
+// Daily Ritual Entry
+model RitualEntry {
+  id          String   @id @default(uuid())
+  userId      String
+  date        DateTime @db.Date
+  type        String   // 'morning' or 'evening'
+  
+  gratitude1  String?
+  gratitude2  String?
+  gratitude3  String?
+  gratitude4  String?
+  gratitude5  String?
+  
+  proud1      String?
+  proud2      String?
+  proud3      String?
+  proud4      String?
+  proud5      String?
+  
+  identity    String?  @db.Text
+  wins        String?  @db.Text
+  reflection  String?  @db.Text
+  
+  northStarReviewed Boolean @default(false)
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date, type])
+  @@index([userId, date])
+}
+
+// Identity Statement
+model Identity {
+  id          String   @id @default(uuid())
+  userId      String
+  pillar      Pillar
+  statement   String
+  active      Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  habits      Habit[]
+  proofs      IdentityProof[]
+
+  @@index([userId, pillar])
+}
+
+// Habit linked to Identity
+model Habit {
+  id          String   @id @default(uuid())
+  identityId  String
+  title       String
+  frequency   String   @default("daily")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  identity    Identity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+  completions HabitCompletion[]
+
+  @@index([identityId])
+}
+
+// Habit Completion Log
+model HabitCompletion {
+  id          String   @id @default(uuid())
+  habitId     String
+  date        DateTime @db.Date
+  completed   Boolean  @default(true)
+  note        String?
+  createdAt   DateTime @default(now())
+
+  habit       Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@unique([habitId, date])
+  @@index([habitId, date])
+}
+
+// Identity Proof - Evidence supporting identity
+model IdentityProof {
+  id          String   @id @default(uuid())
+  identityId  String
+  content     String
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  identity    Identity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+
+  @@index([identityId])
+}
+
+// Life Score - Weekly assessment
+model LifeScore {
+  id                String   @id @default(uuid())
+  userId            String
+  weekStart         DateTime @db.Date
+  
+  healthScore       Int?
+  wealthScore       Int?
+  relationScore     Int?
+  careerScore       Int?
+  spiritualScore    Int?
+  contributionScore Int?
+  
+  overallScore      Int?
+  notes             String?  @db.Text
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, weekStart])
+  @@index([userId])
+}
+
+// Weekly Review Entry
+model WeeklyReview {
+  id          String   @id @default(uuid())
+  userId      String
+  weekStart   DateTime @db.Date
+  
+  wins        String?  @db.Text
+  insights    String?  @db.Text
+  adjustments String?  @db.Text
+  nextFocus   String?  @db.Text
+  
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, weekStart])
+  @@index([userId])
+}
+
+// User Settings for Life System
+model LifeSettings {
+  id                  String   @id @default(uuid())
+  userId              String   @unique
+  
+  morningRitualTime   String?
+  eveningRitualTime   String?
+  weeklyReviewDay     Int      @default(0)
+  timezone            String   @default("America/Chicago")
+  
+  onboardingCompleted Boolean  @default(false)
+  onboardingStep      Int      @default(0)
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
