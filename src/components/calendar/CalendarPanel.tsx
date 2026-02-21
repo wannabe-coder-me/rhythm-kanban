@@ -104,16 +104,8 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
   const [newEventRecurrence, setNewEventRecurrence] = useState<'none' | 'daily' | 'weekly' | 'monthly'>('none');
   const [newEventColorId, setNewEventColorId] = useState<string>('4'); // Default orange
   
-  // Hovered hour tracking for highlighting (works during drag too)
+  // Hovered hour tracking for highlighting
   const [hoveredHour, setHoveredHour] = useState<number | null>(null);
-  const [dropTargetHour, setDropTargetHour] = useState<number | null>(null);
-  
-  // Clear drop target when no longer dragging (pendingTask cleared)
-  useEffect(() => {
-    if (!pendingTask) {
-      setDropTargetHour(null);
-    }
-  }, [pendingTask]);
   
   // Color options for picker
   const colorOptions = [
@@ -570,16 +562,6 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
       },
     });
 
-    // Update drop target hour when dragging over this slot
-    useEffect(() => {
-      if (isOver) {
-        setDropTargetHour(hour);
-      } else if (dropTargetHour === hour) {
-        // Clear if we're no longer over this slot
-        setDropTargetHour(null);
-      }
-    }, [isOver, hour, dropTargetHour]);
-
     const handleSlotClick = (e: React.MouseEvent) => {
       e.stopPropagation();
       e.preventDefault();
@@ -755,24 +737,21 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                 <div className="relative flex-1 overflow-auto">
                   {/* Time labels */}
                   <div className="absolute left-0 top-0 w-14 bg-[#0f0f1a] z-10">
-                    {HOURS.map(hour => {
-                      const isHighlighted = hoveredHour === hour || dropTargetHour === hour;
-                      return (
-                        <div 
-                          key={hour} 
-                          style={{ height: `${getHourHeight(hour)}px` }}
-                          className={`flex items-start justify-end pr-2 pt-1 transition-colors ${
-                            isHighlighted ? 'bg-violet-500/30' : ''
-                          }`}
-                        >
-                          <span className={`text-sm font-semibold transition-colors ${
-                            isHighlighted ? 'text-violet-300' : 'text-white/70'
-                          }`}>
-                            {hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`}
-                          </span>
-                        </div>
-                      );
-                    })}
+                    {HOURS.map(hour => (
+                      <div 
+                        key={hour} 
+                        style={{ height: `${getHourHeight(hour)}px` }}
+                        className={`flex items-start justify-end pr-2 pt-1 transition-colors ${
+                          hoveredHour === hour ? 'bg-violet-500/30' : ''
+                        }`}
+                      >
+                        <span className={`text-sm font-semibold transition-colors ${
+                          hoveredHour === hour ? 'text-violet-300' : 'text-white/70'
+                        }`}>
+                          {hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                   
                   {/* Time slots and events */}
@@ -881,24 +860,21 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                   {/* Time labels */}
                   <div className="w-14 flex-shrink-0 bg-[#0f0f1a]">
                     <div className="h-8" /> {/* Header spacer */}
-                    {HOURS.map(hour => {
-                      const isHighlighted = hoveredHour === hour || dropTargetHour === hour;
-                      return (
-                        <div 
-                          key={hour} 
-                          style={{ height: `${getHourHeight(hour)}px` }}
-                          className={`flex items-start justify-end pr-2 pt-1 transition-colors ${
-                            isHighlighted ? 'bg-violet-500/30' : ''
-                          }`}
-                        >
-                          <span className={`text-xs font-semibold transition-colors ${
-                            isHighlighted ? 'text-violet-300' : 'text-white/70'
-                          }`}>
-                            {hour === 0 ? '12a' : hour < 12 ? `${hour}a` : hour === 12 ? '12p' : `${hour - 12}p`}
-                          </span>
-                        </div>
-                      );
-                    })}
+                    {HOURS.map(hour => (
+                      <div 
+                        key={hour} 
+                        style={{ height: `${getHourHeight(hour)}px` }}
+                        className={`flex items-start justify-end pr-2 pt-1 transition-colors ${
+                          hoveredHour === hour ? 'bg-violet-500/30' : ''
+                        }`}
+                      >
+                        <span className={`text-xs font-semibold transition-colors ${
+                          hoveredHour === hour ? 'text-violet-300' : 'text-white/70'
+                        }`}>
+                          {hour === 0 ? '12a' : hour < 12 ? `${hour}a` : hour === 12 ? '12p' : `${hour - 12}p`}
+                        </span>
+                      </div>
+                    ))}
                   </div>
 
                   {/* Days */}
