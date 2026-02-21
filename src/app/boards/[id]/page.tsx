@@ -1278,6 +1278,7 @@ function BoardPageContent() {
               // Silent - no toast for calendar operations
             }}
             onEventCreate={async ({ taskId, title, start, end, colorId, recurrence }) => {
+              console.log('[Board] Creating calendar event:', { taskId, title, start, end });
               try {
                 const res = await fetch('/api/calendar/events', {
                   method: 'POST',
@@ -1291,13 +1292,21 @@ function BoardPageContent() {
                     recurrence,
                   }),
                 });
-                if (!res.ok) throw new Error('Failed to create event');
+                const data = await res.json();
+                if (!res.ok) {
+                  console.error('[Board] Calendar event creation failed:', data);
+                  throw new Error(data.error || 'Failed to create event');
+                }
+                console.log('[Board] Calendar event created:', data);
                 setCalendarRefreshKey(k => k + 1);
                 if (taskId) {
                   setScheduledTaskIds(prev => new Set([...prev, taskId]));
                 }
+                addToast("Event created", "success");
               } catch (error) {
+                console.error('[Board] Calendar event creation error:', error);
                 addToast("Failed to create calendar event", "error");
+                throw error; // Re-throw so CalendarPanel knows it failed
               }
             }}
           />

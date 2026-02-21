@@ -1012,18 +1012,25 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  if (newEventTitle.trim()) {
-                    onEventCreate?.({
-                      taskId: newEventData.taskId,
-                      title: newEventTitle,
-                      start: newEventData.start,
-                      end: newEventData.end,
-                      colorId: newEventColorId,
-                      recurrence: newEventRecurrence !== 'none' ? { frequency: newEventRecurrence } : undefined,
-                    });
-                    setShowCreateModal(false);
-                    onPendingTaskHandled?.();
+                onClick={async () => {
+                  if (newEventTitle.trim() && onEventCreate) {
+                    try {
+                      await onEventCreate({
+                        taskId: newEventData.taskId,
+                        title: newEventTitle,
+                        start: newEventData.start,
+                        end: newEventData.end,
+                        colorId: newEventColorId,
+                        recurrence: newEventRecurrence !== 'none' ? { frequency: newEventRecurrence } : undefined,
+                      });
+                      setShowCreateModal(false);
+                      onPendingTaskHandled?.();
+                    } catch (error) {
+                      console.error('[CalendarPanel] Failed to create event:', error);
+                      // Don't close modal on error so user can retry
+                    }
+                  } else if (!onEventCreate) {
+                    console.error('[CalendarPanel] onEventCreate callback is not defined');
                   }
                 }}
                 disabled={!newEventTitle.trim()}
