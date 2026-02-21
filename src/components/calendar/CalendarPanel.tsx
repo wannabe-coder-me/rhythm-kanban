@@ -102,7 +102,7 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
   const [newEventData, setNewEventData] = useState<{ start: Date; end: Date; taskId?: string } | null>(null);
   const [newEventTitle, setNewEventTitle] = useState('');
   const [newEventRecurrence, setNewEventRecurrence] = useState<'none' | 'daily' | 'weekly' | 'monthly'>('none');
-  const [newEventColorId, setNewEventColorId] = useState<string>('9'); // Default blue
+  const [newEventColorId, setNewEventColorId] = useState<string>('4'); // Default orange
   
   // Color options for picker
   const colorOptions = [
@@ -266,7 +266,7 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
     if (pendingTask && pendingTaskId) {
       setNewEventTitle(pendingTask.title);
       setNewEventData({ start: pendingTask.start, end: pendingTask.end, taskId: pendingTask.id });
-      setNewEventColorId('9'); // Default blue
+      setNewEventColorId('4'); // Default orange
       setNewEventRecurrence('none');
       setShowCreateModal(true);
       // Clear pending task after handling to prevent re-trigger
@@ -566,7 +566,7 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
       
       // Set all modal state at once
       setNewEventTitle('');
-      setNewEventColorId('9');
+      setNewEventColorId('4'); // Default orange
       setNewEventRecurrence('none');
       setNewEventData({ start, end });
       
@@ -989,7 +989,12 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                   {colorOptions.map(opt => (
                     <button
                       key={opt.id}
-                      onClick={() => setNewEventColorId(opt.id)}
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setNewEventColorId(opt.id);
+                      }}
                       className={`w-6 h-6 rounded-full border-2 transition-all ${
                         newEventColorId === opt.id ? 'border-white scale-110' : 'border-transparent hover:scale-105'
                       }`}
@@ -1013,41 +1018,21 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
               </button>
               <button
                 onClick={async () => {
-                  console.log('[CalendarPanel] Create clicked', { 
-                    title: newEventTitle, 
-                    hasCallback: !!onEventCreate,
-                    eventData: newEventData 
-                  });
+                  if (!newEventData || !onEventCreate || !newEventTitle.trim()) return;
                   
-                  if (!newEventData) {
-                    alert('Error: No event data. Please try again.');
-                    return;
-                  }
-                  
-                  if (!onEventCreate) {
-                    alert('Error: Calendar not properly connected. Please refresh the page.');
-                    console.error('[CalendarPanel] onEventCreate callback is not defined');
-                    return;
-                  }
-                  
-                  if (newEventTitle.trim()) {
-                    try {
-                      console.log('[CalendarPanel] Calling onEventCreate...');
-                      await onEventCreate({
-                        taskId: newEventData.taskId,
-                        title: newEventTitle,
-                        start: newEventData.start,
-                        end: newEventData.end,
-                        colorId: newEventColorId,
-                        recurrence: newEventRecurrence !== 'none' ? { frequency: newEventRecurrence } : undefined,
-                      });
-                      console.log('[CalendarPanel] Event created successfully');
-                      setShowCreateModal(false);
-                      onPendingTaskHandled?.();
-                    } catch (error) {
-                      console.error('[CalendarPanel] Failed to create event:', error);
-                      alert('Failed to create event: ' + (error instanceof Error ? error.message : 'Unknown error'));
-                    }
+                  try {
+                    await onEventCreate({
+                      taskId: newEventData.taskId,
+                      title: newEventTitle,
+                      start: newEventData.start,
+                      end: newEventData.end,
+                      colorId: newEventColorId,
+                      recurrence: newEventRecurrence !== 'none' ? { frequency: newEventRecurrence } : undefined,
+                    });
+                    setShowCreateModal(false);
+                    onPendingTaskHandled?.();
+                  } catch (error) {
+                    console.error('[CalendarPanel] Failed to create event:', error);
                   }
                 }}
                 disabled={!newEventTitle.trim()}
