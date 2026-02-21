@@ -1102,6 +1102,40 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
                 </div>
               )}
               
+              {/* Color Picker */}
+              <div className="mt-4">
+                <p className="text-xs text-slate-500 mb-2">Color</p>
+                <div className="flex flex-wrap gap-2">
+                  {colorOptions.map(opt => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (onEventUpdate) {
+                          try {
+                            await onEventUpdate(selectedEvent.id, { colorId: opt.id });
+                            // Update local state to reflect change
+                            setSelectedEvent({ ...selectedEvent, color: opt.id });
+                            setEvents(prev => prev.map(ev => 
+                              ev.id === selectedEvent.id ? { ...ev, color: opt.id } : ev
+                            ));
+                          } catch (error) {
+                            console.error('Failed to update event color:', error);
+                          }
+                        }
+                      }}
+                      className={`w-6 h-6 rounded-full border-2 transition-all ${
+                        selectedEvent.color === opt.id ? 'border-white scale-110' : 'border-transparent hover:scale-105'
+                      }`}
+                      style={{ backgroundColor: opt.color }}
+                      title={opt.name}
+                    />
+                  ))}
+                </div>
+              </div>
+
               {/* Open in Google Calendar */}
               {selectedEvent.htmlLink && (
                 <a
