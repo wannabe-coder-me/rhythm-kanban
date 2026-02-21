@@ -309,3 +309,65 @@ useEffect(() => { onEventRef.current = onEvent; }, [onEvent]);
 
 ### Suppressed "Joined Board" Toasts
 The `user:joined` event fires on every page load/reconnect, not just first join. Toast notification removed - connected users shown in header instead.
+
+---
+
+## Future Roadmap
+
+### Product Vision: Entrepreneur's Life Planning System
+
+Evolving from task management to a comprehensive life planning tool for entrepreneurs.
+
+**Potential New Features:**
+- Goals & OKRs (quarterly/annual)
+- Habit tracking
+- Time blocking / calendar integration
+- Journaling / reflection
+- Life areas (health, relationships, business, finances)
+- Dashboard / life score
+
+### Multi-Tenant SaaS Migration (Phase 2)
+
+**Strategy:** Refine product first, then migrate. Validate PMF before infrastructure investment.
+
+**When to migrate:**
+- Core feature set locked in
+- 5-10 beta users wanting own workspaces
+- Ready to monetize
+
+**Migration Plan:**
+
+1. **Data Model**
+   ```prisma
+   model Organization {
+     id               String   @id @default(cuid())
+     name             String
+     slug             String   @unique
+     plan             Plan     @default(FREE)
+     stripeCustomerId String?
+     members          OrgMember[]
+     boards           Board[]
+   }
+   
+   model OrgMember {
+     orgId   String
+     userId  String
+     role    OrgRole  // OWNER, ADMIN, MEMBER
+     @@unique([orgId, userId])
+   }
+   
+   enum Plan { FREE, PRO, BUSINESS }
+   ```
+
+2. **Tenant Switching** - Org switcher in nav, middleware validates access
+
+3. **Onboarding** - Sign up → Create org → Invite team → First board
+
+4. **Billing (Stripe)**
+   - Free: 2 boards, 3 members
+   - Pro ($10/mo): unlimited boards, 10 members
+   - Business ($25/mo): unlimited everything
+
+5. **Security** - Row-level filtering, audit logs, GDPR export
+
+**Estimated effort:** ~2 weeks
