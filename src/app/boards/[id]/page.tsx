@@ -46,6 +46,7 @@ type DragType = "task" | "column";
 interface ActiveDrag {
   type: DragType;
   item: Task | ColumnType;
+  originalColumnId?: string; // Track original column for calendar drops
 }
 
 function BoardPageContent() {
@@ -334,7 +335,8 @@ function BoardPageContent() {
     // Dragging a task
     const task = getAllTasks().find((t) => t.id === activeId);
     if (task) {
-      setActiveDrag({ type: "task", item: task });
+      const originalColumn = findColumnByTaskId(activeId);
+      setActiveDrag({ type: "task", item: task, originalColumnId: originalColumn?.id });
     }
   };
 
@@ -404,6 +406,28 @@ function BoardPageContent() {
         start.setHours(slotData.hour, 0, 0, 0);
         const end = new Date(start);
         end.setHours(start.getHours() + 1);
+        
+        // Revert task to original column if it was moved during drag
+        if (dragData.originalColumnId) {
+          const currentColumn = findColumnByTaskId(task.id);
+          if (currentColumn && currentColumn.id !== dragData.originalColumnId) {
+            // Task was moved during handleDragOver, revert it
+            setColumns((prev) => {
+              return prev.map((col) => {
+                if (col.id === currentColumn.id) {
+                  // Remove from current column
+                  return { ...col, tasks: col.tasks?.filter((t) => t.id !== task.id) || [] };
+                }
+                if (col.id === dragData.originalColumnId) {
+                  // Add back to original column
+                  return { ...col, tasks: [...(col.tasks || []), { ...task, columnId: col.id }] };
+                }
+                return col;
+              });
+            });
+          }
+        }
+        
         // Set pending task to open color picker modal
         setPendingCalendarTask({ id: task.id, title: task.title, start, end });
       }
