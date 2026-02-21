@@ -177,7 +177,7 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0a0a12] via-[#1a1a2e] to-[#0a0a12] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-[#0a0a12] via-[#1a1a2e] to-[#0a0a12] flex items-center justify-center p-4 overflow-y-auto">
       <div className="w-full max-w-2xl">
         {/* Progress bar */}
         {currentStep !== "welcome" && currentStep !== "complete" && (

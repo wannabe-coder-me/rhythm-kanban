@@ -144,7 +144,7 @@ export default function WeeklyReviewPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0a0a12] via-[#1a1a2e] to-[#0a0a12]">
+    <div className="min-h-screen bg-gradient-to-br from-[#0a0a12] via-[#1a1a2e] to-[#0a0a12] overflow-y-auto">
       {/* Header */}
       <header className="border-b border-white/10 px-6 py-4">
         <div className="max-w-3xl mx-auto flex items-center justify-between">

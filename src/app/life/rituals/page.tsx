@@ -53,7 +53,7 @@ export default function RitualsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a12]">
+    <div className="min-h-screen bg-[#0a0a12] overflow-y-auto">
       {/* Header */}
       <header className="border-b border-white/10 px-6 py-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
