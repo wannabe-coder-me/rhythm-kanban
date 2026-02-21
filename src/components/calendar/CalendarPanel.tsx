@@ -273,6 +273,7 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
       setNewEventData({ start: pendingTask.start, end: pendingTask.end, taskId: pendingTask.id });
       setNewEventColorId('4'); // Default orange
       setNewEventRecurrence('none');
+      setDropTargetHour(null); // Clear highlight when modal opens
       setShowCreateModal(true);
       // Clear pending task after handling to prevent re-trigger
       onPendingTaskHandled?.();
@@ -565,16 +566,10 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
     });
 
     // Update dropTargetHour when dragging over this slot
-    const wasOverRef = useRef(false);
     useEffect(() => {
-      if (isOver && !wasOverRef.current) {
-        // Just became active
+      if (isOver) {
         setDropTargetHour(hour);
-      } else if (!isOver && wasOverRef.current) {
-        // Just became inactive - clear if we were the highlighted one
-        setDropTargetHour(prev => prev === hour ? null : prev);
       }
-      wasOverRef.current = isOver;
     }, [isOver, hour]);
 
     const handleSlotClick = (e: React.MouseEvent) => {
@@ -592,6 +587,7 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
       setNewEventColorId('4'); // Default orange
       setNewEventRecurrence('none');
       setNewEventData({ start, end });
+      setDropTargetHour(null); // Clear highlight when modal opens
       
       // Small delay to ensure state is set before showing modal
       setTimeout(() => setShowCreateModal(true), 0);
