@@ -565,12 +565,16 @@ export default function CalendarPanel({ isOpen, onClose, onEventCreate, onEventU
     });
 
     // Update dropTargetHour when dragging over this slot
+    const wasOverRef = useRef(false);
     useEffect(() => {
-      if (isOver) {
+      if (isOver && !wasOverRef.current) {
+        // Just became active
         setDropTargetHour(hour);
-      } else if (dropTargetHour === hour) {
-        setDropTargetHour(null);
+      } else if (!isOver && wasOverRef.current) {
+        // Just became inactive - clear if we were the highlighted one
+        setDropTargetHour(prev => prev === hour ? null : prev);
       }
+      wasOverRef.current = isOver;
     }, [isOver, hour]);
 
     const handleSlotClick = (e: React.MouseEvent) => {
