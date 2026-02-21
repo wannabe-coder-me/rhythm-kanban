@@ -125,31 +125,42 @@ DREAM → BELIEVE → ACHIEVE
 
 ---
 
-### 4. Action System (Enhanced Kanban)
+### 4. Action System (Kanban Integration)
 
-**Concept**: Every action links to a North Star goal
+**Concept**: Existing Kanban boards become the action engine for achieving North Star goals.
 
-**Structure**:
+**How Kanban Integrates**:
 ```
-North Star Goal
-    └── Milestone (optional)
-        └── Action (task)
+Life System
+    └── North Star Goals (6 pillars)
+        └── Linked to Kanban Tasks (optional)
+    
+Kanban Boards
+    └── Existing boards remain (work projects, personal, etc.)
+    └── Tasks can optionally link to a North Star
+    └── Filter by pillar to see all related work
 ```
 
 **Views**:
-- **Today** - Actions for today across all pillars
-- **Pillar View** - Actions grouped by life area
-- **Kanban** - Traditional board view
-- **Calendar** - Time-blocked actions
+- **Today** - Actions for today across all pillars (pulls from linked tasks)
+- **Pillar View** - All tasks linked to a specific pillar's North Star
+- **Kanban** - Traditional board view (existing functionality)
+- **Calendar** - Time-blocked actions (existing functionality)
+- **Table** - Existing table view
+- **Timeline** - Existing timeline view
 
-**Task Properties**:
-- Title
-- Linked North Star (required)
-- Pillar (auto from North Star)
-- Due date
+**Task Enhancements**:
+- Optional link to North Star goal
+- Auto-tagged with pillar when linked
 - Energy level (🔋 High/Medium/Low)
-- Time estimate
-- Completed checkbox
+- Time estimate (minutes)
+
+**Benefits of Integration**:
+- Keep all existing Kanban functionality
+- Work projects link to Career North Star
+- Personal tasks link to relevant pillars
+- See progress toward life goals through task completion
+- "Today" view aggregates across all boards
 
 ---
 
