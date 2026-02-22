@@ -103,14 +103,14 @@ export default function NorthStarPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a12] flex items-center justify-center">
+      <div className="h-screen bg-[#0a0a12] flex items-center justify-center">
         <div className="text-white/60">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a12] overflow-y-auto">
+    <div className="h-screen bg-[#0a0a12] flex flex-col overflow-hidden">
       {/* Header */}
       <header className="border-b border-white/10 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -123,7 +123,8 @@ export default function NorthStarPage() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-6 py-8">
+      <main className="flex-1 overflow-y-auto">
+        <div className="max-w-4xl mx-auto px-6 py-8">
         {/* The Card */}
         <div className="bg-gradient-to-br from-[#1a1a2e] to-[#0f0f1a] rounded-2xl p-8 border border-white/10 mb-8">
           <div className="text-center mb-6">
@@ -239,6 +240,7 @@ export default function NorthStarPage() {
         <div className="mt-8 text-center text-white/40 text-sm">
           <p className="mb-2">📋 Print this card and carry it with you</p>
           <p>👀 Review every morning and evening with emotion</p>
+        </div>
         </div>
       </main>
 
