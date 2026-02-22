@@ -181,6 +181,12 @@ li a {
   height: 12px !important;
 }
 
+/* Task list checkboxes - smaller touch targets ok */
+.task-checkbox {
+  min-height: 20px !important;
+  min-width: 20px !important;
+}
+
 .table-date-input {
   min-height: auto !important;
   min-width: auto !important;

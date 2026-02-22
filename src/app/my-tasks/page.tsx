@@ -267,7 +267,7 @@ export default function MyTasksPage() {
         onClick={() => toggleComplete(task)}
         disabled={updatingTaskId === task.id}
         className={clsx(
-          "mt-1 w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors",
+          "task-checkbox mt-1 w-5 h-5 rounded border flex-shrink-0 flex items-center justify-center transition-colors",
           task.completed
             ? "bg-green-500 border-green-500 text-white"
             : "border-slate-500 hover:border-indigo-400"
